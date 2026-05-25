@@ -120,7 +120,7 @@ export function HomeClient({ featuredProducts, articles }: HomeClientProps) {
               </Link>
               <form action="/api/auth/signout" method="POST">
                 <button type="submit" className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4 h-4" /> Sign Out
                 </button>
               </form>
             </>
