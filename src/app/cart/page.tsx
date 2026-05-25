@@ -39,14 +39,27 @@ type CartRow = {
 // SUBMIT BUTTON
 // ─────────────────────────────────────────────────────
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+function SubmitButton({
+  disabled,
+  pending,
+}: {
+  disabled: boolean;
+  pending: boolean;
+}) {
   return (
     <button
       type="submit"
-      disabled={disabled}
+      disabled={disabled || pending}
       className="w-full h-12 bg-primary text-primary-foreground rounded-md text-base font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
     >
-      Submit RFQ
+      {pending ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Generating Quotation…
+        </>
+      ) : (
+        "Get Quotation Now"
+      )}
     </button>
   );
 }
@@ -168,7 +181,7 @@ export default function CartPage() {
 
   // ── RFQ form state ──────────────────────────────────
 
-  const [rfqState, rfqAction] = useActionState<RfqFormState, FormData>(
+  const [rfqState, rfqAction, isSubmitting] = useActionState<RfqFormState, FormData>(
     submitRfqAction,
     {}
   );
@@ -227,11 +240,13 @@ export default function CartPage() {
       <main className="flex-1 py-10 px-6 container mx-auto max-w-6xl">
         <div className="mb-10">
           <h1 className="font-heading text-3xl md:text-4xl font-medium tracking-normal mb-3">
-            Quotation Request
+            Get Your Quotation
           </h1>
           <p className="text-muted-foreground leading-relaxed max-w-2xl">
-            Review your selected equipment below, then submit your RFQ. Our team will
-            respond within 24 hours with an official quotation PDF.
+            Review your selected equipment and click <strong>Get Quotation Now</strong>{" "}
+            — we'll generate an indicative PDF instantly using current catalog pricing.
+            When you're ready to finalize, request a meeting and our team will confirm
+            the final price.
           </p>
         </div>
 
@@ -291,11 +306,14 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* Project requirements (only shown to authenticated users to submit) */}
+              {/* Project requirements — all optional; included on the PDF for context */}
               <div className="border border-border rounded-md bg-card p-5">
-                <h2 className="font-heading font-medium text-base text-foreground mb-4">
+                <h2 className="font-heading font-medium text-base text-foreground mb-1">
                   Project Details
                 </h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  All fields optional. These help us prepare for the discussion.
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
@@ -373,9 +391,9 @@ export default function CartPage() {
                 <div className="bg-muted/30 rounded-md p-3 flex items-start gap-2">
                   <AlertCircle size={14} className="text-muted-foreground shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Submitting sends your requirements to our engineering team. An
-                    official quotation PDF with pricing will be generated within 24
-                    hours.
+                    Your PDF quotation is generated instantly using catalog pricing
+                    (GST 18% included). Final pricing is confirmed during a brief
+                    meeting with our team.
                   </p>
                 </div>
 
@@ -386,13 +404,16 @@ export default function CartPage() {
                 )}
 
                 {isAuthenticated ? (
-                  <SubmitButton disabled={isPending || cartRows.length === 0} />
+                  <SubmitButton
+                    disabled={cartRows.length === 0}
+                    pending={isSubmitting}
+                  />
                 ) : (
                   <Link
                     href="/login?callbackUrl=/cart"
                     className="block w-full text-center h-12 leading-[3rem] bg-primary text-primary-foreground rounded-md text-base font-medium hover:opacity-90 transition-opacity"
                   >
-                    Login to submit RFQ
+                    Login to get quotation
                   </Link>
                 )}
 

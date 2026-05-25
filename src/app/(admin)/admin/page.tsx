@@ -40,6 +40,7 @@ export default async function AdminDashboard() {
           </div>
           <div className="flex gap-3 text-sm">
             <Link href="/admin/products" className="text-muted-foreground hover:text-foreground transition-colors">Products</Link>
+            <Link href="/admin/quotations" className="text-muted-foreground hover:text-foreground transition-colors">Quotations</Link>
             <Link href="/admin/inquiries" className="text-muted-foreground hover:text-foreground transition-colors">Inquiries</Link>
             <Link href="/admin/products/import" className="text-muted-foreground hover:text-foreground transition-colors">Import</Link>
             <Link href="/crm" className="text-muted-foreground hover:text-foreground transition-colors">CRM</Link>

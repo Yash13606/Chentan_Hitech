@@ -33,6 +33,7 @@ enum InquiryStatus {
   ASSIGNED
   IN_REVIEW
   QUOTED
+  MEETING_REQUESTED
   CLOSED_WON
   CLOSED_LOST
 }
@@ -350,6 +351,7 @@ model Inquiry {
   deliveryLocation String?
   deliveryTimeline String?
   assignedToId     String?
+  meetingRequestedAt DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 

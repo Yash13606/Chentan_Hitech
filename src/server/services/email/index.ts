@@ -129,7 +129,7 @@ export async function sendRfqConfirmationEmail(params: {
   });
 }
 
-/** Sent when an admin approves a quotation. */
+/** Sent to the customer the moment they generate a quotation from the cart. */
 export async function sendQuotationReadyEmail(params: {
   toEmail: string;
   customerName: string;
@@ -137,7 +137,7 @@ export async function sendQuotationReadyEmail(params: {
   totalCents: number;
   quotationId: string;
 }) {
-  const { toEmail, customerName, inquiryNumber, totalCents, quotationId } = params;
+  const { toEmail, customerName, inquiryNumber, totalCents } = params;
   const formattedTotal = new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
@@ -145,13 +145,13 @@ export async function sendQuotationReadyEmail(params: {
   }).format(totalCents / 100);
 
   const body = `
-    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">Your Quotation is Ready</h2>
-    <p style="margin:0 0 24px;color:#666;">Hi ${customerName ?? "there"}, we've prepared an official quotation for your inquiry.</p>
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">Your Indicative Quotation</h2>
+    <p style="margin:0 0 24px;color:#666;">Hi ${customerName ?? "there"}, here is your indicative quotation based on current catalog pricing.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
       <tr>
-        <td style="font-size:12px;color:#666;padding-bottom:4px;">Inquiry</td>
-        <td style="font-size:12px;color:#666;padding-bottom:4px;text-align:right;">Quotation Total</td>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;">Reference</td>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;text-align:right;">Indicative Total</td>
       </tr>
       <tr>
         <td style="font-size:16px;font-weight:600;font-family:monospace;">${inquiryNumber}</td>
@@ -159,21 +159,171 @@ export async function sendQuotationReadyEmail(params: {
       </tr>
     </table>
 
-    <p style="color:#444;line-height:1.6;">Download your PDF quotation from the customer portal. The download link is valid for <strong>24 hours</strong>.</p>
+    <p style="color:#444;line-height:1.6;">
+      The attached PDF reflects our standard catalog pricing. Volume discounts, custom
+      configurations, and final delivery terms are confirmed during a brief discussion
+      with our team.
+    </p>
+
+    <p style="color:#444;line-height:1.6;margin-top:16px;">
+      <strong>Ready to finalize?</strong> Click the button below in your portal to request
+      a meeting with our sales engineers — we'll work out the final price and confirm delivery.
+    </p>
 
     <a href="${APP_URL}/portal/quotations" style="display:inline-block;margin-top:16px;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:500;">
-      Download Quotation PDF →
+      View Quotation & Request Meeting →
     </a>
 
-    <p style="margin-top:24px;font-size:12px;color:#999;">If the link expires, log in to your portal and download again from My Quotations.</p>
+    <p style="margin-top:24px;font-size:12px;color:#999;">
+      PDF download link is valid for 24 hours. Log in to your portal to regenerate it anytime.
+    </p>
   `;
 
   await sendAndLog({
     to: toEmail,
-    subject: `Quotation Ready — ${inquiryNumber}`,
-    html: baseLayout(`Quotation Ready — ${inquiryNumber}`, body),
+    subject: `Indicative Quotation — ${inquiryNumber}`,
+    html: baseLayout(`Indicative Quotation — ${inquiryNumber}`, body),
     template: "quotation_ready",
   });
+}
+
+/** Sent to admin(s) every time a customer generates an instant quotation. */
+export async function sendQuotationToAdminEmail(params: {
+  toEmails: string[];
+  inquiryNumber: string;
+  customerName: string;
+  customerEmail: string;
+  companyName: string;
+  totalCents: number;
+  itemCount: number;
+  quotationId: string;
+  inquiryId: string;
+}) {
+  const {
+    toEmails,
+    inquiryNumber,
+    customerName,
+    customerEmail,
+    companyName,
+    totalCents,
+    itemCount,
+    inquiryId,
+  } = params;
+
+  const formattedTotal = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(totalCents / 100);
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">New Quotation Generated</h2>
+    <p style="margin:0 0 24px;color:#666;">A customer has generated an indicative quotation. Review the details below.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;">Reference</td>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;text-align:right;">Total</td>
+      </tr>
+      <tr>
+        <td style="font-size:16px;font-weight:600;font-family:monospace;padding-bottom:12px;">${inquiryNumber}</td>
+        <td style="font-size:16px;font-weight:600;text-align:right;padding-bottom:12px;">${formattedTotal}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border-top:1px solid #e5e5e5;padding-top:12px;font-size:13px;color:#444;">
+          <strong>${customerName}</strong> &middot; ${customerEmail}<br/>
+          <span style="color:#666;">${companyName}</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding-top:8px;font-size:12px;color:#666;">
+          ${itemCount} line item${itemCount !== 1 ? "s" : ""}
+        </td>
+      </tr>
+    </table>
+
+    <a href="${APP_URL}/admin/inquiries/${inquiryId}" style="display:inline-block;margin-top:8px;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:500;">
+      View Inquiry →
+    </a>
+    <a href="${APP_URL}/admin/quotations" style="display:inline-block;margin-top:8px;margin-left:8px;border:1px solid #1a1a1a;color:#1a1a1a;text-decoration:none;padding:9px 24px;border-radius:6px;font-size:14px;font-weight:500;">
+      All Quotations
+    </a>
+  `;
+
+  for (const toEmail of toEmails) {
+    await sendAndLog({
+      to: toEmail,
+      subject: `New Quotation — ${inquiryNumber} · ${formattedTotal}`,
+      html: baseLayout(`New Quotation — ${inquiryNumber}`, body),
+      template: "quotation_admin_copy",
+    });
+  }
+}
+
+/** Sent to admin(s) when a customer requests a meeting to finalize a quotation. */
+export async function sendMeetingRequestEmail(params: {
+  toEmails: string[];
+  inquiryNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
+  companyName: string;
+  totalCents: number;
+  inquiryId: string;
+}) {
+  const {
+    toEmails,
+    inquiryNumber,
+    customerName,
+    customerEmail,
+    customerPhone,
+    companyName,
+    totalCents,
+    inquiryId,
+  } = params;
+
+  const formattedTotal = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(totalCents / 100);
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#b45309;">🤝 Meeting Requested</h2>
+    <p style="margin:0 0 24px;color:#666;">A customer wants to discuss finalising their quotation. Please reach out.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;">Reference</td>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;text-align:right;">Quotation Total</td>
+      </tr>
+      <tr>
+        <td style="font-size:16px;font-weight:600;font-family:monospace;padding-bottom:12px;">${inquiryNumber}</td>
+        <td style="font-size:16px;font-weight:600;text-align:right;padding-bottom:12px;">${formattedTotal}</td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr><td style="font-size:12px;color:#666;padding-bottom:4px;">Customer</td></tr>
+      <tr><td style="font-size:15px;font-weight:600;">${customerName}</td></tr>
+      <tr><td style="font-size:13px;color:#444;padding-top:6px;">${companyName}</td></tr>
+      <tr><td style="font-size:13px;color:#444;padding-top:8px;"><a href="mailto:${customerEmail}" style="color:#1a1a1a;text-decoration:underline;">${customerEmail}</a></td></tr>
+      ${customerPhone ? `<tr><td style="font-size:13px;color:#444;padding-top:4px;"><a href="tel:${customerPhone}" style="color:#1a1a1a;text-decoration:underline;">${customerPhone}</a></td></tr>` : ""}
+    </table>
+
+    <a href="${APP_URL}/admin/inquiries/${inquiryId}" style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:500;">
+      Open Inquiry →
+    </a>
+  `;
+
+  for (const toEmail of toEmails) {
+    await sendAndLog({
+      to: toEmail,
+      subject: `🤝 Meeting Request — ${inquiryNumber}`,
+      html: baseLayout(`Meeting Request — ${inquiryNumber}`, body),
+      template: "meeting_request",
+    });
+  }
 }
 
 /** Sent on successful registration. */

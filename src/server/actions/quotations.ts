@@ -6,7 +6,10 @@ import { db } from "@/server/db";
 import { revalidateTag } from "next/cache";
 import { renderAndUploadQuotationPdf } from "@/server/services/pdf";
 import { presignGet } from "@/server/services/r2";
-import { sendQuotationReadyEmail } from "@/server/services/email";
+import {
+  sendQuotationReadyEmail,
+  sendMeetingRequestEmail,
+} from "@/server/services/email";
 import { writeAuditLog } from "@/server/services/audit";
 import { after } from "next/server";
 import { z } from "zod";
@@ -267,7 +270,7 @@ export async function getQuotationDownloadUrlAction(
     return { error: "PDF not available." };
   }
 
-  // Customers can only download their own approved quotations
+  // Customers can only download their own quotations
   if (
     session.user.role === "CUSTOMER" &&
     quotation.inquiry.customerId !== session.user.id
@@ -275,8 +278,13 @@ export async function getQuotationDownloadUrlAction(
     return { error: "Access denied." };
   }
 
-  if (quotation.status !== "APPROVED" && session.user.role === "CUSTOMER") {
-    return { error: "This quotation is not yet approved." };
+  // Customers can download once the quotation is SENT (auto-flow) or APPROVED (legacy manual flow)
+  const customerDownloadable = ["SENT", "APPROVED"];
+  if (
+    session.user.role === "CUSTOMER" &&
+    !customerDownloadable.includes(quotation.status)
+  ) {
+    return { error: "This quotation is not yet available." };
   }
 
   // Mint a 24-hour presigned URL
@@ -304,3 +312,87 @@ export async function getQuotationPreviewUrlAction(
   const url = await presignGet(quotation.pdfKey, 900); // 15 min
   return { url };
 }
+
+// ─────────────────────────────────────────────────────
+// REQUEST MEETING (Customer)
+// Customer clicks "Contact us to finalize" on a quotation.
+// Updates inquiry status → MEETING_REQUESTED, notifies admin.
+// ─────────────────────────────────────────────────────
+
+export async function requestMeetingAction(
+  quotationId: string
+): Promise<{ success: true } | { error: string }> {
+  const session = await requireAuth();
+
+  const quotation = await db.quotation.findUnique({
+    where: { id: quotationId },
+    select: {
+      id: true,
+      inquiryId: true,
+      totalCents: true,
+      inquiry: {
+        select: {
+          inquiryNumber: true,
+          customerId: true,
+          meetingRequestedAt: true,
+          status: true,
+          customer: { select: { name: true, email: true, phone: true } },
+          company: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  if (!quotation) return { error: "Quotation not found." };
+  if (quotation.inquiry.customerId !== session.user.id) {
+    return { error: "Access denied." };
+  }
+  if (quotation.inquiry.meetingRequestedAt) {
+    return { error: "Meeting already requested for this inquiry." };
+  }
+
+  await db.inquiry.update({
+    where: { id: quotation.inquiryId },
+    data: {
+      status: "MEETING_REQUESTED",
+      meetingRequestedAt: new Date(),
+    },
+  });
+
+  await writeAuditLog(
+    session.user.id,
+    "MEETING_REQUEST",
+    "Inquiry",
+    quotation.inquiry.inquiryNumber
+  );
+
+  // Notify admins
+  after(async () => {
+    const envList = process.env.ADMIN_NOTIFICATION_EMAIL;
+    const adminEmails = envList
+      ? envList.split(",").map((e) => e.trim()).filter(Boolean)
+      : (
+          await db.user.findMany({
+            where: { role: "ADMIN" },
+            select: { email: true },
+          })
+        ).map((a) => a.email).filter(Boolean);
+
+    if (adminEmails.length > 0) {
+      await sendMeetingRequestEmail({
+        toEmails: adminEmails,
+        inquiryNumber: quotation.inquiry.inquiryNumber,
+        customerName: quotation.inquiry.customer.name ?? "Customer",
+        customerEmail: quotation.inquiry.customer.email ?? "",
+        customerPhone: quotation.inquiry.customer.phone ?? null,
+        companyName: quotation.inquiry.company.name,
+        totalCents: quotation.totalCents,
+        inquiryId: quotation.inquiryId,
+      });
+    }
+  });
+
+  revalidateTag("inquiries", "default");
+  return { success: true };
+}
+
