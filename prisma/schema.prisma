@@ -1,0 +1,561 @@
+// Chetan Hi-Tech Procurement Platform — Prisma Schema
+// Prisma 7.x: datasource url lives in prisma.config.ts, not here.
+// Client output: src/generated/prisma — import from "@/generated/prisma"
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  SALES
+  QUOTE_MGR
+  ADMIN
+}
+
+enum LeadScore {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum InquiryStatus {
+  NEW
+  ASSIGNED
+  IN_REVIEW
+  QUOTED
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum QuotationStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  REVISED
+  EXPIRED
+}
+
+enum ProductAvailability {
+  IN_STOCK
+  MADE_TO_ORDER
+  DISCONTINUED
+}
+
+enum ConsultationStatus {
+  REQUESTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum IndustryType {
+  HOSPITALITY
+  RESTAURANT
+  HEALTHCARE
+  DEFENCE
+  MARINE
+  LAUNDRY
+  EDUCATION
+  CORPORATE
+  OTHER
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  BOUNCED
+  FAILED
+}
+
+enum ImportStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ─────────────────────────────────────────────────────
+// AUTH.JS v5 REQUIRED MODELS
+// ─────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  // Custom fields
+  phone         String?
+  passwordHash  String?
+  role          Role      @default(CUSTOMER)
+  companyId     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Auth.js relations
+  accounts      Account[]
+  sessions      Session[]
+
+  // App relations
+  company             Company?          @relation(fields: [companyId], references: [id])
+  assignedInquiries   Inquiry[]         @relation("AssignedTo")
+  createdQuotations   Quotation[]       @relation("QuotationCreatedBy")
+  approvedQuotations  Quotation[]       @relation("QuotationApprovedBy")
+  leadAssignmentsFrom LeadAssignment[]  @relation("AssignedFrom")
+  leadAssignmentsTo   LeadAssignment[]  @relation("AssignedTo")
+  callLogs            CallLog[]
+  notifications       Notification[]
+  consultations       Consultation[]    @relation("SalesConsultations")
+  customerConsultations Consultation[]  @relation("CustomerConsultations")
+  cart                Cart?
+  inquiries           Inquiry[]         @relation("CustomerInquiries")
+  revisions           QuotationRevision[]
+  importRuns          ImportRun[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────────────
+// COMPANY
+// ─────────────────────────────────────────────────────
+
+model Company {
+  id           String       @id @default(cuid())
+  name         String
+  industry     IndustryType @default(OTHER)
+  gstin        String?
+  orgSize      String?      // "1-10", "11-50", "51-200", "200+"
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  website      String?
+  leadScore    LeadScore    @default(LOW)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  users     User[]
+  inquiries Inquiry[]
+
+  @@index([leadScore, industry])
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────────────────
+// PRODUCT CATALOG
+// ─────────────────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  name        String
+  description String?
+  parentId    String?
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@map("categories")
+}
+
+model Industry {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  type        IndustryType @unique
+  description String?
+  heroImage   String?      // R2 key
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  products IndustryProduct[]
+
+  @@map("industries")
+}
+
+model IndustryProduct {
+  industryId String
+  productId  String
+  sortOrder  Int    @default(0)
+
+  industry Industry @relation(fields: [industryId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@id([industryId, productId])
+  @@map("industry_products")
+}
+
+model Product {
+  id           String              @id @default(cuid())
+  sku          String              @unique
+  slug         String              @unique
+  title        String
+  description  String?
+  categoryId   String
+  availability ProductAvailability @default(IN_STOCK)
+  specs        Json                @default("{}")
+  images       String[]            // R2 keys
+  priceCents   Int?                // null = pricing on request
+  isActive     Boolean             @default(true)
+  sortOrder    Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  category         Category          @relation(fields: [categoryId], references: [id])
+  industries       IndustryProduct[]
+  cartItems        CartItem[]
+  bundleItems      BundleItem[]
+
+  @@index([slug])
+  @@index([sku])
+  @@index([categoryId])
+  @@map("products")
+}
+
+// ─────────────────────────────────────────────────────
+// BUNDLES
+// ─────────────────────────────────────────────────────
+
+model Bundle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isPublic    Boolean  @default(false) // admin-curated vs customer-created
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items BundleItem[]
+
+  @@map("bundles")
+}
+
+model BundleItem {
+  id        String @id @default(cuid())
+  bundleId  String
+  productId String
+  qty       Int    @default(1)
+  notes     String?
+
+  bundle  Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("bundle_items")
+}
+
+// ─────────────────────────────────────────────────────
+// CART
+// ─────────────────────────────────────────────────────
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  guestId   String?  @unique // cookie-based ID for guests
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  productId String
+  qty       Int     @default(1)
+  notes     String?
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+// ─────────────────────────────────────────────────────
+// INQUIRY / RFQ
+// ─────────────────────────────────────────────────────
+
+model Inquiry {
+  id               String        @id @default(cuid())
+  inquiryNumber    String        @unique // CHT-2024-0001
+  companyId        String
+  customerId       String
+  status           InquiryStatus @default(NEW)
+  leadScore        LeadScore     @default(LOW)
+  priority         String        @default("STANDARD") // URGENT, STANDARD, PLANNING
+  cartSnapshot     Json          // copy of cart at time of submission
+  projectNotes     String?
+  deliveryLocation String?
+  deliveryTimeline String?
+  assignedToId     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  company    Company  @relation(fields: [companyId], references: [id])
+  customer   User     @relation("CustomerInquiries", fields: [customerId], references: [id])
+  assignedTo User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  quotations   Quotation[]
+  assignments  LeadAssignment[]
+  callLogs     CallLog[]
+
+  @@index([status, assignedToId, createdAt(sort: Desc)])
+  @@map("inquiries")
+}
+
+// ─────────────────────────────────────────────────────
+// QUOTATION + PDF
+// ─────────────────────────────────────────────────────
+
+model Quotation {
+  id           String          @id @default(cuid())
+  inquiryId    String
+  version      Int             @default(1)
+  status       QuotationStatus @default(DRAFT)
+  pdfKey       String?         // R2 object key
+  lineItems    Json            // [{productId, title, qty, unitCents, notes}]
+  subtotalCents Int            @default(0)
+  taxCents     Int             @default(0)
+  totalCents   Int             @default(0)
+  deliveryTerms String?
+  paymentTerms  String?
+  validUntil   DateTime?
+  notes        String?
+  createdById  String
+  approvedById String?
+  approvedAt   DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  inquiry    Inquiry @relation(fields: [inquiryId], references: [id])
+  createdBy  User    @relation("QuotationCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?   @relation("QuotationApprovedBy", fields: [approvedById], references: [id])
+
+  revisions QuotationRevision[]
+
+  @@index([inquiryId, version])
+  @@map("quotations")
+}
+
+model QuotationRevision {
+  id          String   @id @default(cuid())
+  quotationId String
+  version     Int
+  lineItems   Json
+  notes       String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("quotation_revisions")
+}
+
+// ─────────────────────────────────────────────────────
+// CONSULTATION BOOKING
+// ─────────────────────────────────────────────────────
+
+model Consultation {
+  id            String             @id @default(cuid())
+  customerId    String
+  salesUserId   String?
+  type          String             @default("PRODUCT_INQUIRY") // PRODUCT_INQUIRY, SITE_VISIT, ENGINEERING, PROJECT_PLANNING
+  status        ConsultationStatus @default(REQUESTED)
+  requestedSlot DateTime?
+  confirmedSlot DateTime?
+  meetingUrl    String?
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  customer  User  @relation("CustomerConsultations", fields: [customerId], references: [id])
+  salesUser User? @relation("SalesConsultations", fields: [salesUserId], references: [id])
+
+  @@map("consultations")
+}
+
+// ─────────────────────────────────────────────────────
+// CRM
+// ─────────────────────────────────────────────────────
+
+model LeadAssignment {
+  id         String   @id @default(cuid())
+  inquiryId  String
+  fromUserId String?
+  toUserId   String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  inquiry  Inquiry @relation(fields: [inquiryId], references: [id])
+  fromUser User?   @relation("AssignedFrom", fields: [fromUserId], references: [id])
+  toUser   User    @relation("AssignedTo", fields: [toUserId], references: [id])
+
+  @@map("lead_assignments")
+}
+
+model CallLog {
+  id            String   @id @default(cuid())
+  inquiryId     String
+  salesUserId   String
+  durationSec   Int?
+  summary       String?
+  nextActionAt  DateTime?
+  createdAt     DateTime @default(now())
+
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id])
+  salesUser User    @relation(fields: [salesUserId], references: [id])
+
+  @@map("call_logs")
+}
+
+// ─────────────────────────────────────────────────────
+// KNOWLEDGE CENTER
+// ─────────────────────────────────────────────────────
+
+model KnowledgeArticle {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  title       String
+  excerpt     String?
+  body        String       // MDX content
+  industry    IndustryType?
+  tags        String[]
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("knowledge_articles")
+}
+
+// ─────────────────────────────────────────────────────
+// NOTIFICATIONS + EMAIL LOG
+// ─────────────────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  body      String?
+  payload   Json                @default("{}")
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model EmailLog {
+  id         String      @id @default(cuid())
+  toEmail    String
+  template   String
+  status     EmailStatus @default(QUEUED)
+  providerId String?     // Resend message ID
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime    @default(now())
+
+  @@map("email_logs")
+}
+
+// ─────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String   // "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN"
+  entity    String   // model name e.g. "Quotation"
+  entityId  String
+  diff      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────
+// CSV IMPORT TRACKING
+// ─────────────────────────────────────────────────────
+
+model ImportRun {
+  id         String       @id @default(cuid())
+  userId     String
+  fileKey    String       // R2 object key
+  status     ImportStatus @default(PROCESSING)
+  totalRows  Int          @default(0)
+  okRows     Int          @default(0)
+  failedRows Int          @default(0)
+  errors     Json         @default("[]") // [{row, sku, message}]
+  createdAt  DateTime     @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("import_runs")
+}

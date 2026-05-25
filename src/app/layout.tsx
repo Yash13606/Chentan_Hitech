@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Lora, Geist_Mono } from "next/font/google";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const inter = Inter({
@@ -19,7 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Chetan Hi-Tech | Industrial Procurement Platform",
-  description: "Digital quotation and industrial procurement platform for hotels, hospitals, defence, and corporate facilities.",
+  description:
+    "Digital quotation and industrial procurement platform for hotels, hospitals, defence, and corporate facilities.",
 };
 
 export default function RootLayout({
@@ -32,7 +34,9 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${lora.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
