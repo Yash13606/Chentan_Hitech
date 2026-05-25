@@ -1,162 +1,118 @@
-"use client";
-
-import { useActionState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { auth } from "@/server/auth";
+import { db } from "@/server/db";
 import Link from "next/link";
-import { updateProfileAction, type ProfileState } from "@/server/actions/profile";
-import { CheckCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { ProfileForm } from "./ProfileForm";
 
-const INDUSTRY_OPTIONS = [
-  "HOSPITALITY",
-  "HEALTHCARE",
-  "DEFENCE",
-  "CORPORATE",
-  "EDUCATION",
-  "RETAIL",
-  "MARINE",
-  "GOVERNMENT",
-  "OTHER",
-];
+export default async function ProfilePage() {
+  const session = await auth();
 
-const ORG_SIZE_OPTIONS = ["1-10", "11-50", "51-200", "201-500", "500+"];
+  const user = await db.user.findUnique({
+    where: { id: session!.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+      company: {
+        select: {
+          name: true,
+          industry: true,
+          orgSize: true,
+          gstin: true,
+          website: true,
+          address: true,
+          city: true,
+          state: true,
+          pincode: true,
+          leadScore: true,
+        },
+      },
+    },
+  });
 
-export default function ProfilePage() {
-  const { data: session, update } = useSession();
-  const [state, action] = useActionState<ProfileState, FormData>(
-    updateProfileAction,
-    {}
-  );
+  const initials = (user?.name ?? user?.email ?? "U")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString("en-IN", {
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <Link
-              href="/portal"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="font-heading font-medium text-xl text-foreground mt-1">
-              Company Profile
-            </h1>
-          </div>
+      {/* Page header */}
+      <div className="border-b border-border bg-card">
+        <div className="max-w-2xl mx-auto px-6 py-5">
+          <Link
+            href="/portal"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Dashboard
+          </Link>
+          <h1 className="font-heading font-medium text-2xl text-foreground leading-tight">
+            Company Profile
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Keep your company details accurate to receive relevant quotations
+            and pricing.
+          </p>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        {state.success && (
-          <div className="mb-6 flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-md px-4 py-3 text-sm">
-            <CheckCircle className="w-4 h-4 shrink-0" />
-            Profile updated successfully.
+      <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        {/* Account identity card — non-editable */}
+        <div className="rounded-xl border border-border bg-card p-5 flex items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0 font-heading font-medium text-base text-foreground select-none"
+            aria-hidden
+          >
+            {initials}
           </div>
-        )}
-
-        {state.error && (
-          <p className="mb-6 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-4 py-3">
-            {state.error}
-          </p>
-        )}
-
-        <form action={action} className="space-y-5">
-          <div className="border border-border rounded-md bg-card p-5 space-y-4">
-            <h2 className="font-medium text-sm text-foreground">Company Details</h2>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Company Name *
-              </label>
-              <input
-                name="companyName"
-                required
-                placeholder="Acme Hospitality Pvt Ltd"
-                className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Industry
-                </label>
-                <select
-                  name="industry"
-                  className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  {INDUSTRY_OPTIONS.map((ind) => (
-                    <option key={ind} value={ind}>
-                      {ind.charAt(0) + ind.slice(1).toLowerCase().replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Organisation Size
-                </label>
-                <select
-                  name="orgSize"
-                  className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="">Not specified</option>
-                  {ORG_SIZE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s} employees</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">City</label>
-                <input
-                  name="city"
-                  placeholder="Mumbai"
-                  className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">State</label>
-                <input
-                  name="state"
-                  placeholder="Maharashtra"
-                  className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">
+              {user?.name ?? "—"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {user?.email}
+            </p>
+            {memberSince && (
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
+                Member since {memberSince}
+              </p>
+            )}
           </div>
+          <span className="text-[11px] font-medium tracking-wide uppercase px-2.5 py-1 rounded-full bg-secondary text-muted-foreground shrink-0">
+            {user?.role?.toLowerCase() ?? "customer"}
+          </span>
+        </div>
 
-          <div className="border border-border rounded-md bg-card p-5 space-y-4">
-            <h2 className="font-medium text-sm text-foreground">Contact</h2>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Phone Number
-              </label>
-              <input
-                name="phone"
-                type="tel"
-                placeholder="+91 98765 43210"
-                className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center gap-3">
-            <button
-              type="submit"
-              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              Save Changes
-            </button>
-            <Link
-              href="/portal"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancel
-            </Link>
-          </div>
-        </form>
+        {/* Editable profile form */}
+        <ProfileForm
+          initial={{
+            name: user?.name ?? "",
+            email: user?.email ?? "",
+            phone: user?.phone ?? "",
+            companyName: user?.company?.name ?? "",
+            industry: user?.company?.industry ?? "OTHER",
+            orgSize: user?.company?.orgSize ?? "",
+            gstin: user?.company?.gstin ?? "",
+            website: user?.company?.website ?? "",
+            address: user?.company?.address ?? "",
+            city: user?.company?.city ?? "",
+            state: user?.company?.state ?? "",
+            pincode: user?.company?.pincode ?? "",
+          }}
+        />
       </div>
     </div>
   );
