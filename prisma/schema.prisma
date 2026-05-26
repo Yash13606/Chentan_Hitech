@@ -252,10 +252,12 @@ model Product {
   title        String
   description  String?
   categoryId   String
+  brand        String?             // Denormalised from specs.brand for fast filtering (e.g. "Rational", "IFB")
   availability ProductAvailability @default(IN_STOCK)
   specs        Json                @default("{}")
   images       String[]            // R2 keys
   priceCents   Int?                // null = pricing on request
+  featured     Boolean             @default(false)
   isActive     Boolean             @default(true)
   sortOrder    Int                 @default(0)
   createdAt    DateTime            @default(now())
@@ -269,6 +271,8 @@ model Product {
   @@index([slug])
   @@index([sku])
   @@index([categoryId])
+  @@index([brand])
+  @@index([featured, sortOrder])
   @@map("products")
 }
 

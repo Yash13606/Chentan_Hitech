@@ -119,11 +119,11 @@ export async function getProductBySlug(slug: string, isLoggedIn = false) {
   });
 }
 
-/** Featured products for homepage — cached aggressively */
+/** Featured products for homepage — cached aggressively. Filters by `featured: true`. */
 export const getFeaturedProducts = unstable_cache(
   async () => {
     return db.product.findMany({
-      where: { isActive: true },
+      where: { isActive: true, featured: true },
       select: {
         id: true,
         sku: true,
@@ -133,6 +133,7 @@ export const getFeaturedProducts = unstable_cache(
         availability: true,
         images: true,
         specs: true,
+        brand: true,
         category: { select: { name: true } },
       },
       orderBy: { sortOrder: "asc" },
@@ -141,4 +142,30 @@ export const getFeaturedProducts = unstable_cache(
   },
   ["featured-products"],
   { tags: ["products"], revalidate: 3600 }
+);
+
+/** Top-level categories with a live product count for the homepage grid. */
+export const getTopCategories = unstable_cache(
+  async () => {
+    const cats = await db.category.findMany({
+      where: { parentId: null },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        _count: { select: { products: { where: { isActive: true } } } },
+      },
+    });
+    return cats.map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      description: c.description,
+      productCount: c._count.products,
+    }));
+  },
+  ["top-categories"],
+  { tags: ["categories", "products"], revalidate: 3600 }
 );
