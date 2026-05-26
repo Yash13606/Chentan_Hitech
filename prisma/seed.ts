@@ -10,7 +10,10 @@
  *   • 40 Products (sku/slug-unique) with real titles, specs, prices
  *   •  6 marked `featured: true` for the homepage
  *   •  6 KnowledgeArticles (slug-unique)
- *   •  1 admin User from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD env vars
+ *
+ * Admin users are NOT seeded here — use `npm run admin:create` for that.
+ * Keeping admin creation out of the seed avoids storing credentials in
+ * env vars, .env files, CI secrets, or shell history.
  *
  * Re-runs are safe. Existing rows are updated, not duplicated.
  * Source for product/brand/price data: www.chetanhitech.com scraped docs.
@@ -21,7 +24,6 @@
 
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { hash } from "@node-rs/argon2";
 import "dotenv/config";
 
 // Prisma 7 requires a driver adapter for Postgres.
@@ -1173,29 +1175,12 @@ async function main() {
   }
   console.log(`  ✓ ${ARTICLES.length} knowledge articles upserted`);
 
-  // 5. Admin user (optional, only if env vars present)
-  const adminEmail = process.env.SEED_ADMIN_EMAIL;
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-  if (adminEmail && adminPassword) {
-    const passwordHash = await hash(adminPassword);
-    await db.user.upsert({
-      where: { email: adminEmail },
-      create: {
-        email: adminEmail,
-        name: "Admin",
-        role: "ADMIN",
-        passwordHash,
-      },
-      update: {
-        passwordHash, // refresh hash each run if password changed
-      },
-    });
-    console.log(`  ✓ Admin user ${adminEmail} upserted`);
-  } else {
-    console.log("  • Admin user skipped (set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD to create one)");
-  }
+  // Admin users are NOT created by the seed.
+  // Use the interactive admin script instead:  npm run admin:create
+  // (avoids the risk of credentials sitting in env vars, .env, or CI logs)
 
   console.log("✨ Seed complete.");
+  console.log("→ To create an admin user, run:  npm run admin:create");
 }
 
 main()
