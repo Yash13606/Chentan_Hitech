@@ -33,12 +33,12 @@ export default async function HomePage() {
 
       <main className="pt-16">
         <Hero />
+        <HowItWorks />
         <TrustStrip />
         <CategoryGrid categories={categories} />
         <FeaturedProducts products={featuredProducts} isLoggedIn={isLoggedIn} />
         <BrandWall />
         <Industries />
-        <HowItWorks />
         <Testimonials />
         <KnowledgeTeaser articles={articles} />
         <AiAssistantCard />

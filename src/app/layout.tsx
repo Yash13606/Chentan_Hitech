@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Lora, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { auth } from "@/server/auth";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,18 +25,20 @@ export const metadata: Metadata = {
     "Digital quotation and industrial procurement platform for hotels, hospitals, defence, and corporate facilities.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  
   return (
     <html
       lang="en"
       className={`${inter.variable} ${lora.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );
