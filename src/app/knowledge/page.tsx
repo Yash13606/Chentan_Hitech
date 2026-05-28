@@ -1,6 +1,8 @@
 import { getPublishedArticles } from "@/server/dal/articles";
 import Link from "next/link";
 import { BookOpen, ArrowUpRight, ArrowLeft } from "lucide-react";
+import { Nav } from "@/components/home/Nav";
+import { Footer } from "@/components/home/Footer";
 
 const INDUSTRY_LABELS: Record<string, string> = {
   HOSPITALITY: "Hospitality",
@@ -20,9 +22,10 @@ export default async function KnowledgePage() {
   const articles = await getPublishedArticles(50).catch(() => []);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-foreground px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Nav />
+      {/* Header — mt-16 clears the fixed nav */}
+      <div className="mt-16 border-b border-border bg-foreground px-6 py-10">
         <div className="max-w-5xl mx-auto">
           <Link href="/" className="text-xs text-background/50 hover:text-background/80 transition-colors flex items-center gap-1 mb-4">
             <ArrowLeft className="w-3 h-3" /> Home
@@ -81,6 +84,7 @@ export default async function KnowledgePage() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

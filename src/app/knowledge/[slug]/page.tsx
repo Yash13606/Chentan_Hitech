@@ -2,6 +2,8 @@ import { getArticleBySlug, getPublishedArticles } from "@/server/dal/articles";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
+import { Nav } from "@/components/home/Nav";
+import { Footer } from "@/components/home/Footer";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -40,9 +42,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!article || !article.publishedAt) notFound();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-foreground px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Nav />
+      {/* Header — mt-16 clears the fixed nav */}
+      <div className="mt-16 border-b border-border bg-foreground px-6 py-10">
         <div className="max-w-3xl mx-auto">
           <Link
             href="/knowledge"
@@ -127,6 +130,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

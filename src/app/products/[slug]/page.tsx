@@ -6,6 +6,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { IndustrialButton } from "@/components/ui/industrial-button";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { Lock, ArrowLeft } from "lucide-react";
+import { Nav } from "@/components/home/Nav";
+import { Footer } from "@/components/home/Footer";
 
 function formatPrice(cents: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -49,27 +51,28 @@ export default async function ProductPage({ params }: ProductPageProps) {
       : "Discontinued";
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className="min-h-screen bg-background flex flex-col">
+      <Nav />
+      <div className="flex-1 max-w-6xl mx-auto w-full px-6 pt-24 pb-16">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Link href="/" className="hover:text-foreground transition-colors">
+        <nav className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-muted-foreground mb-8" aria-label="Breadcrumb">
+          <Link href="/" className="hover:text-foreground transition-colors shrink-0">
             Home
           </Link>
-          <span>/</span>
-          <Link href="/catalog" className="hover:text-foreground transition-colors">
+          <span className="shrink-0">/</span>
+          <Link href="/catalog" className="hover:text-foreground transition-colors shrink-0">
             Catalog
           </Link>
-          <span>/</span>
+          <span className="hidden sm:inline shrink-0">/</span>
           <Link
             href={`/catalog?category=${product.category.slug}`}
-            className="hover:text-foreground transition-colors"
+            className="hidden sm:inline hover:text-foreground transition-colors shrink-0"
           >
             {product.category.name}
           </Link>
-          <span>/</span>
-          <span className="text-foreground truncate max-w-48">{product.title}</span>
-        </div>
+          <span className="hidden sm:inline shrink-0">/</span>
+          <span className="hidden sm:inline text-foreground truncate max-w-[200px] md:max-w-xs">{product.title}</span>
+        </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Image */}
@@ -177,6 +180,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

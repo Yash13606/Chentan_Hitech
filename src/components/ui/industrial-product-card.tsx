@@ -1,21 +1,24 @@
 import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { IndustrialButton } from "./industrial-button";
 import { StatusBadge } from "./status-badge";
-import { Plus, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import { RfqAddButton } from "@/components/cart/rfq-add-button";
 
 interface IndustrialProductCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  productId: string;
   title: string;
   category: string;
-  slug?: string;
-  sku?: string;
+  slug: string;
+  sku: string;
   imagePlaceholder?: string;
   imageKey?: string; // R2 image key
   specs: { label: string; value: string }[];
   availability: "in-stock" | "made-to-order" | "low-stock";
   priceCents?: number;
   isLoggedIn?: boolean;
+  /** Current qty in the user's cart (DB cart for authed, 0 for guest's first paint) */
+  initialQty?: number;
 }
 
 function formatPrice(cents: number) {
@@ -27,6 +30,7 @@ function formatPrice(cents: number) {
 }
 
 export function IndustrialProductCard({
+  productId,
   title,
   category,
   slug,
@@ -36,10 +40,11 @@ export function IndustrialProductCard({
   availability,
   priceCents,
   isLoggedIn = false,
+  initialQty = 0,
   className,
   ...props
 }: IndustrialProductCardProps) {
-  const detailHref = slug ? `/products/${slug}` : "#";
+  const detailHref = `/products/${slug}`;
 
   return (
     <div
@@ -49,31 +54,48 @@ export function IndustrialProductCard({
       )}
       {...props}
     >
-      <div className="aspect-[4/3] w-full bg-muted flex items-center justify-center p-6 relative">
-        <div className="absolute top-4 left-4">
+      <div className="aspect-[4/3] w-full bg-muted/50 flex flex-col justify-between p-5 relative overflow-hidden">
+        {/* Subtle grid background — feels like technical drawing paper */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.35] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        <div className="relative flex items-start justify-between">
           <StatusBadge
             status={
               availability === "in-stock"
                 ? "success"
                 : availability === "low-stock"
-                ? "warning"
-                : "neutral"
+                  ? "warning"
+                  : "neutral"
             }
           >
             {availability === "in-stock"
               ? "Ready Stock"
               : availability === "low-stock"
-              ? "Low Stock"
-              : "Made to Order"}
+                ? "Low Stock"
+                : "Made to Order"}
           </StatusBadge>
+          {sku && (
+            <div className="font-mono text-[10px] tracking-wider text-muted-foreground/70 uppercase">
+              {sku}
+            </div>
+          )}
         </div>
-        {sku && (
-          <div className="absolute top-4 right-4 font-mono text-[10px] text-muted-foreground">
-            {sku}
-          </div>
-        )}
-        <div className="text-muted-foreground font-mono text-xs opacity-50">
-          [Image: {imagePlaceholder || title}]
+
+        <div className="relative">
+          <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-muted-foreground/60">
+            {category}
+          </p>
+          <p className="mt-1 font-heading text-base font-medium text-foreground/80 line-clamp-2 leading-snug">
+            {imagePlaceholder || title}
+          </p>
         </div>
       </div>
 
@@ -115,22 +137,21 @@ export function IndustrialProductCard({
           )}
         </div>
 
-        <div className="mt-auto pt-4 border-t border-border flex justify-between items-center">
+        <div className="mt-auto pt-4 border-t border-border flex justify-between items-center gap-3">
           <Link
             href={detailHref}
             className="font-sans text-sm text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground transition-colors"
           >
             View details
           </Link>
-          <IndustrialButton
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            disabled={!isLoggedIn}
-            title={!isLoggedIn ? "Sign in to add to RFQ" : undefined}
-          >
-            <Plus size={14} /> Add to RFQ
-          </IndustrialButton>
+          <RfqAddButton
+            productId={productId}
+            title={title}
+            sku={sku}
+            slug={slug}
+            priceCents={priceCents ?? null}
+            initialQty={initialQty}
+          />
         </div>
       </div>
     </div>

@@ -1,21 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, ArrowUpRight } from "lucide-react";
+import { useState, useRef } from "react";
+import { Sparkles, ArrowUpRight, RotateCcw } from "lucide-react";
 import { IndustrialButton } from "@/components/ui/industrial-button";
-import { SectionHeader } from "./CategoryGrid";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 
-/**
- * AI Requirement Assistant — quiet helper card that sits below the fold.
- * The hero is the brand statement; AI is a tool, not the pitch.
- *
- * Graceful degradation: the API route returns a friendly message
- * when ANTHROPIC_API_KEY is missing.
- */
+const EASE = [0.16, 1, 0.3, 1] as const;
+
 export function AiAssistantCard() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(sectionRef, { once: true, margin: "-60px" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,51 +36,128 @@ export function AiAssistantCard() {
     }
   };
 
+  const handleReset = () => {
+    setResult(null);
+    setInput("");
+  };
+
   return (
-    <section
-      id="ai-assistant"
-      className="px-6 py-20 md:py-24 max-w-6xl mx-auto"
-    >
-      <div className="rounded-2xl border border-border bg-card p-8 md:p-12">
-        <div className="flex items-center gap-2 text-[11px] font-medium tracking-[0.18em] uppercase text-muted-foreground mb-4">
-          <Sparkles className="w-3.5 h-3.5" />
+    <section id="ai-assistant" className="bg-foreground">
+      <motion.div
+        ref={sectionRef}
+        className="px-6 py-20 md:py-28 max-w-6xl mx-auto"
+        initial={{ opacity: 0, y: 28 }}
+        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
+        transition={{ duration: 0.6, ease: EASE }}
+      >
+        {/* Eyebrow */}
+        <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] uppercase text-background/45 mb-10 md:mb-12">
+          <Sparkles className="w-3 h-3 text-primary" strokeWidth={1.5} />
           AI Requirement Assistant
         </div>
 
-        <SectionHeader
-          eyebrow=""
-          title="Describe what you need. We'll suggest the right equipment."
-          sub="Tell us about your kitchen, laundry or facility — covers, footprint, project brief. The assistant suggests a starting equipment list you can refine."
-        />
-
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g. 200-cover hotel restaurant in Chennai, Indian + continental menu, central kitchen layout"
-            className="w-full min-h-[120px] rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Your input stays private. We never share project details.
+        {/* Two-column layout */}
+        <div className="grid md:grid-cols-[5fr_7fr] gap-10 md:gap-16 items-start">
+          {/* Left: copy */}
+          <div>
+            <h2 className="font-heading font-medium text-[1.75rem] md:text-[2.1rem] text-background leading-tight tracking-tight">
+              Describe what you need. We&apos;ll suggest the right equipment.
+            </h2>
+            <p className="mt-4 text-sm text-background/55 leading-relaxed">
+              Tell us about your kitchen, laundry or facility — covers,
+              footprint, project brief. The assistant suggests a starting
+              equipment list you can refine.
             </p>
-            <IndustrialButton
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="gap-2"
-            >
-              {loading ? "Generating…" : "Suggest equipment"}
-              <ArrowUpRight className="w-4 h-4" />
-            </IndustrialButton>
+            <div className="mt-8 flex items-center gap-3 text-xs text-background/35">
+              <span className="block w-5 h-px bg-background/20 shrink-0" />
+              Your input stays private. We never share project details.
+            </div>
           </div>
-        </form>
 
-        {result && (
-          <div className="mt-8 rounded-xl border border-border bg-background p-6 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-            {result}
+          {/* Right: form / result */}
+          <div>
+            <AnimatePresence mode="wait">
+              {!result ? (
+                <motion.form
+                  key="form"
+                  onSubmit={handleSubmit}
+                  className="flex flex-col gap-5"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                >
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="e.g. 200-cover hotel restaurant in Chennai, Indian + continental menu, central kitchen layout"
+                    rows={5}
+                    className="w-full rounded-xl bg-background/[0.07] border border-background/[0.14] px-4 py-3.5
+                               text-sm text-background placeholder:text-background/28 leading-relaxed
+                               focus:outline-none focus:border-primary/50 focus:bg-background/[0.11]
+                               transition-colors resize-none"
+                  />
+
+                  <div className="flex items-center justify-end">
+                    <IndustrialButton
+                      type="submit"
+                      variant="inverse"
+                      size="default"
+                      disabled={loading || !input.trim()}
+                      className="gap-2.5 min-w-[170px] justify-center"
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          Analysing
+                          <span className="flex items-center gap-[3px]">
+                            {[0, 1, 2].map((i) => (
+                              <span
+                                key={i}
+                                className="w-[3px] h-[3px] rounded-full bg-current animate-bounce"
+                                style={{ animationDelay: `${i * 0.12}s` }}
+                              />
+                            ))}
+                          </span>
+                        </span>
+                      ) : (
+                        <>
+                          Suggest equipment
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </IndustrialButton>
+                  </div>
+                </motion.form>
+              ) : (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                >
+                  <div className="rounded-xl bg-background/[0.07] border border-background/[0.14] p-6">
+                    <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-background/40 mb-4">
+                      Suggested starting list
+                    </p>
+                    <div className="text-sm text-background/80 leading-relaxed whitespace-pre-wrap">
+                      {result}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleReset}
+                    className="mt-4 flex items-center gap-1.5 text-xs text-background/35 hover:text-background/65 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Start a new request
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        )}
-      </div>
+        </div>
+      </motion.div>
     </section>
   );
 }

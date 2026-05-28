@@ -11,7 +11,10 @@ import {
   Calendar,
   ShoppingCart,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
+import { Nav } from "@/components/home/Nav";
+import { Footer } from "@/components/home/Footer";
 import { useGuestCart } from "@/lib/cart-store";
 import {
   getDbCartAction,
@@ -70,22 +73,26 @@ function SubmitButton({
 
 function EmptyCart() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center max-w-sm px-6">
-        <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h2 className="font-heading font-medium text-xl text-foreground mb-2">
-          Your RFQ cart is empty
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6">
-          Browse the catalog and add products to get a quotation.
-        </p>
-        <Link
-          href="/catalog"
-          className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          Browse Catalog
-        </Link>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Nav />
+      <div className="flex-1 flex items-center justify-center pt-16">
+        <div className="text-center max-w-sm px-6">
+          <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="font-heading font-medium text-xl text-foreground mb-2">
+            Your RFQ cart is empty
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Browse the catalog and add products to get a quotation.
+          </p>
+          <Link
+            href="/catalog"
+            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Browse Catalog
+          </Link>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }
@@ -197,8 +204,11 @@ export default function CartPage() {
 
   if (status === "loading" || loadingCart) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Nav />
+        <div className="flex-1 flex items-center justify-center pt-16">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
@@ -209,35 +219,15 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-sm bg-primary" />
-            <span className="font-heading font-medium tracking-tight text-lg">
-              Chetan Hi-Tech
-            </span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/catalog"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Continue browsing
-            </Link>
-            {!isAuthenticated && (
-              <Link
-                href="/login?callbackUrl=/cart"
-                className="text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-md hover:opacity-90 transition-opacity"
-              >
-                Login to submit
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
+      <Nav />
 
-      <main className="flex-1 py-10 px-6 container mx-auto max-w-6xl">
+      <main className="flex-1 pt-24 pb-10 px-6 container mx-auto max-w-6xl">
+        <Link
+          href="/catalog"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-8"
+        >
+          <ArrowLeft className="w-3 h-3" /> Continue browsing
+        </Link>
         <div className="mb-10">
           <h1 className="font-heading text-3xl md:text-4xl font-medium tracking-normal mb-3">
             Get Your Quotation
@@ -427,6 +417,7 @@ export default function CartPage() {
           </div>
         </form>
       </main>
+      <Footer />
     </div>
   );
 }

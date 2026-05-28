@@ -7,8 +7,11 @@ import { redirect } from "next/navigation";
 import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 
 export default async function AdminKnowledgePage() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== Role.ADMIN) redirect("/unauthorized");
+  // TODO(temp): dev bypass — see (admin)/layout.tsx for the matching note.
+  if (process.env.NODE_ENV === "production") {
+    const session = await auth();
+    if (!session?.user || session.user.role !== Role.ADMIN) redirect("/unauthorized");
+  }
 
   const articles = await getAllArticlesAdmin();
 

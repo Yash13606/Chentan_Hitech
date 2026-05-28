@@ -37,27 +37,7 @@ export default async function PortalPage({ searchParams }: PortalPageProps) {
   });
 
   return (
-    <main className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="font-heading font-medium text-lg text-foreground">
-            Chetan Hi-Tech
-          </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-muted-foreground">{user?.email}</span>
-            <form action="/api/auth/signout" method="POST">
-              <button
-                type="submit"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-
+    <main className="min-h-screen bg-background pt-16">
       <div className="max-w-5xl mx-auto px-6 py-10">
         {/* RFQ success banner */}
         {rfq && (

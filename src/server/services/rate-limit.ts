@@ -12,6 +12,7 @@ type RateLimitResult = { success: boolean; limit: number; remaining: number };
 let _limiter: {
   auth: (ip: string) => Promise<RateLimitResult>;
   rfq: (userId: string) => Promise<RateLimitResult>;
+  contact: (ip: string) => Promise<RateLimitResult>;
 } | null = null;
 
 async function getLimiter() {
@@ -25,6 +26,7 @@ async function getLimiter() {
     _limiter = {
       auth: async () => ({ success: true, limit: Infinity, remaining: Infinity }),
       rfq: async () => ({ success: true, limit: Infinity, remaining: Infinity }),
+      contact: async () => ({ success: true, limit: Infinity, remaining: Infinity }),
     };
     return _limiter;
   }
@@ -48,9 +50,17 @@ async function getLimiter() {
     prefix: "cht:rl:rfq",
   });
 
+  const contactLimit = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(3, "10 m"), // 3 contact inquiries per 10 min per IP
+    analytics: false,
+    prefix: "cht:rl:contact",
+  });
+
   _limiter = {
     auth: (ip: string) => authLimit.limit(ip),
     rfq: (userId: string) => rfqLimit.limit(userId),
+    contact: (ip: string) => contactLimit.limit(ip),
   };
 
   return _limiter;
@@ -65,5 +75,11 @@ export async function checkAuthRateLimit(ip: string): Promise<boolean> {
 export async function checkRfqRateLimit(userId: string): Promise<boolean> {
   const limiter = await getLimiter();
   const result = await limiter.rfq(userId);
+  return result.success;
+}
+
+export async function checkContactRateLimit(ip: string): Promise<boolean> {
+  const limiter = await getLimiter();
+  const result = await limiter.contact(ip);
   return result.success;
 }

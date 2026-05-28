@@ -34,12 +34,20 @@ export async function proxy(request: NextRequest) {
   }
 
   // Protect admin routes
+  // TODO(temp): dev-only bypass — remove before any admin work ships.
+  // In dev we let /admin/* through without auth so localhost opens the
+  // dashboard directly. The layout guard ((admin)/layout.tsx) carries the
+  // same bypass; production still enforces both.
   if (PROTECTED_ADMIN_PATHS.some((p) => pathname.startsWith(p))) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-    if (role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
+    if (process.env.NODE_ENV !== "production") {
+      // fall through — dev bypass
+    } else {
+      if (!isLoggedIn) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+      if (role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
+      }
     }
   }
 

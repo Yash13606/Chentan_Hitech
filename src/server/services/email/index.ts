@@ -358,6 +358,131 @@ export async function sendWelcomeEmail(params: {
   });
 }
 
+/** Sent to admin(s) when a contact-form inquiry is submitted. */
+export async function sendContactInquiryToAdminEmail(params: {
+  toEmails: string[];
+  inquiryNumber: string;
+  inquiryId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  companyName: string | null;
+  message: string | null;
+  transactionalConsent: boolean;
+  marketingConsent: boolean;
+  leadScore: "HIGH" | "MEDIUM" | "LOW";
+}) {
+  const {
+    toEmails,
+    inquiryNumber,
+    inquiryId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    companyName,
+    message,
+    transactionalConsent,
+    marketingConsent,
+    leadScore,
+  } = params;
+
+  const scoreBadgeColor =
+    leadScore === "HIGH" ? "#dc2626" : leadScore === "MEDIUM" ? "#d97706" : "#6b7280";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">New Inquiry Received</h2>
+    <p style="margin:0 0 24px;color:#666;">A new inquiry was submitted from the website contact form. Reply within 10 minutes for best conversion.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;">Reference</td>
+        <td style="font-size:12px;color:#666;padding-bottom:4px;text-align:right;">Lead Score</td>
+      </tr>
+      <tr>
+        <td style="font-size:16px;font-weight:600;font-family:monospace;padding-bottom:12px;">${inquiryNumber}</td>
+        <td style="text-align:right;padding-bottom:12px;">
+          <span style="display:inline-block;background:${scoreBadgeColor};color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;letter-spacing:0.5px;">${leadScore}</span>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e5e5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr><td style="font-size:11px;color:#999;letter-spacing:0.5px;text-transform:uppercase;padding-bottom:6px;">Contact</td></tr>
+      <tr><td style="font-size:16px;font-weight:600;color:#1a1a1a;">${customerName}</td></tr>
+      ${companyName ? `<tr><td style="font-size:13px;color:#666;padding-top:2px;">${companyName}</td></tr>` : ""}
+      <tr><td style="font-size:13px;color:#444;padding-top:10px;"><a href="mailto:${customerEmail}" style="color:#1a1a1a;text-decoration:underline;">${customerEmail}</a></td></tr>
+      <tr><td style="font-size:13px;color:#444;padding-top:4px;"><a href="tel:${customerPhone}" style="color:#1a1a1a;text-decoration:underline;">${customerPhone}</a></td></tr>
+    </table>
+
+    ${
+      message
+        ? `<div style="background:#fff;border-left:3px solid #1a1a1a;padding:14px 18px;margin-bottom:24px;">
+            <p style="margin:0 0 6px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.5px;">Message</p>
+            <p style="margin:0;font-size:14px;color:#1a1a1a;line-height:1.6;white-space:pre-wrap;">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+          </div>`
+        : `<p style="font-size:13px;color:#999;font-style:italic;margin-bottom:24px;">No message provided.</p>`
+    }
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="font-size:11px;color:#666;line-height:1.6;">
+          <strong>Transactional SMS consent:</strong> ${transactionalConsent ? "✓ Granted" : "✗ Not granted"}<br/>
+          <strong>Marketing SMS consent:</strong> ${marketingConsent ? "✓ Granted" : "✗ Not granted"}
+        </td>
+      </tr>
+    </table>
+
+    <a href="${APP_URL}/admin/inquiries/${inquiryId}" style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:500;">
+      Open in CRM →
+    </a>
+  `;
+
+  for (const toEmail of toEmails) {
+    await sendAndLog({
+      to: toEmail,
+      subject: `New Inquiry — ${customerName}${companyName ? ` (${companyName})` : ""} · ${inquiryNumber}`,
+      html: baseLayout(`New Inquiry — ${inquiryNumber}`, body),
+      template: "contact_inquiry_admin",
+    });
+  }
+}
+
+/** Sent to the customer to confirm their contact-form inquiry was received. */
+export async function sendContactInquiryConfirmationEmail(params: {
+  toEmail: string;
+  customerName: string;
+  inquiryNumber: string;
+}) {
+  const { toEmail, customerName, inquiryNumber } = params;
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;">We got your inquiry</h2>
+    <p style="margin:0 0 24px;color:#666;">Hi ${customerName}, thanks for reaching out. Our team will get back to you within 10 minutes during business hours (Mon–Sat, 9 AM – 7 PM IST).</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:12px;color:#666;padding-bottom:6px;">Reference Number</td>
+      </tr>
+      <tr>
+        <td style="font-size:18px;font-weight:600;font-family:monospace;">${inquiryNumber}</td>
+      </tr>
+    </table>
+
+    <p style="color:#444;line-height:1.6;">Keep this reference handy if you need to follow up. You can also browse our equipment catalog while you wait.</p>
+
+    <a href="${APP_URL}/catalog" style="display:inline-block;margin-top:16px;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:500;">
+      Browse Catalog →
+    </a>
+  `;
+
+  await sendAndLog({
+    to: toEmail,
+    subject: `We got your inquiry — ${inquiryNumber}`,
+    html: baseLayout(`Inquiry Received — ${inquiryNumber}`, body),
+    template: "contact_inquiry_confirmation",
+  });
+}
+
 /** Sent when a consultation is confirmed by the sales team. */
 export async function sendConsultationConfirmedEmail(params: {
   toEmail: string;

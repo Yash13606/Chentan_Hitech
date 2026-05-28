@@ -48,7 +48,7 @@ export default async function ProfilePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       {/* Page header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-2xl mx-auto px-6 py-5">

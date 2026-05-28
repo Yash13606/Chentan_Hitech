@@ -165,6 +165,71 @@ export async function updateDbCartItemQtyAction(
 }
 
 // ─────────────────────────────────────────────────────
+// SET QTY BY PRODUCT ID
+// Used by catalog cards — they don't know the CartItem.id.
+// Sets the line to `qty` exactly: deletes when qty <= 0,
+// creates when missing, updates otherwise.
+// ─────────────────────────────────────────────────────
+
+export async function setDbCartQtyByProductAction(
+  productId: string,
+  qty: number
+): Promise<CartActionResult> {
+  const session = await requireAuth();
+  const cart = await getOrCreateCart(session.user.id);
+  const existing = cart.items.find((i) => i.product.id === productId);
+
+  if (qty <= 0) {
+    if (existing) {
+      await db.cartItem.deleteMany({
+        where: { id: existing.id, cartId: cart.id },
+      });
+    }
+    return { ok: true };
+  }
+
+  if (existing) {
+    await db.cartItem.update({
+      where: { id: existing.id },
+      data: { qty },
+    });
+  } else {
+    const product = await db.product.findUnique({
+      where: { id: productId, isActive: true },
+      select: { id: true },
+    });
+    if (!product) return { ok: false, error: "Product not found." };
+
+    await db.cartItem.create({
+      data: { cartId: cart.id, productId, qty },
+    });
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Lightweight read helper used by the Nav badge and catalog cards.
+ * Returns a map of productId → qty for the current user's cart, or
+ * an empty object for guests / no cart.
+ */
+export async function getCartQtyMapAction(): Promise<Record<string, number>> {
+  try {
+    const session = await requireAuth();
+    const cart = await db.cart.findUnique({
+      where: { userId: session.user.id },
+      include: { items: { select: { productId: true, qty: true } } },
+    });
+    if (!cart) return {};
+    const map: Record<string, number> = {};
+    for (const item of cart.items) map[item.productId] = item.qty;
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+// ─────────────────────────────────────────────────────
 // MERGE GUEST CART → DB CART (called after login)
 // ─────────────────────────────────────────────────────
 
