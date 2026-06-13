@@ -91,12 +91,13 @@ export function AdminDashboardClient({ stats, recentInquiries, importRuns }: Adm
         {/* Asymmetrical Stats Grid */}
         <motion.div variants={STAGGER_CHILD} className="grid grid-cols-2 lg:grid-cols-4 gap-0 border border-border mb-12">
           {[
-            { label: "Active Products", value: stats.products, icon: Package },
-            { label: "Categories", value: stats.categories, icon: List },
-            { label: "Total Inquiries", value: stats.inquiries, icon: ArrowUpRight },
-            { label: "Registered Users", value: stats.users, icon: Users },
+            { label: "Active Products", value: stats.products, icon: Package, href: "/admin/products" },
+            { label: "Categories", value: stats.categories, icon: List, href: "/admin/categories" },
+            { label: "Total Inquiries", value: stats.inquiries, icon: ArrowUpRight, href: "/admin/inquiries" },
+            { label: "Registered Users", value: stats.users, icon: Users, href: "/admin/users" },
           ].map((stat, i) => (
-            <div 
+            <Link 
+              href={stat.href}
               key={stat.label} 
               className={`group p-6 md:p-8 bg-background hover:bg-foreground hover:text-background transition-colors duration-300 flex flex-col justify-between min-h-[160px]
                 ${i !== 0 && i !== 2 ? "border-l border-border" : ""}
@@ -110,10 +111,11 @@ export function AdminDashboardClient({ stats, recentInquiries, importRuns }: Adm
                 </p>
                 <stat.icon className="w-4 h-4 text-muted-foreground group-hover:text-background/70" />
               </div>
-              <p className="font-heading font-medium text-4xl md:text-5xl text-foreground group-hover:text-background tracking-tighter mt-4">
+              <p className="font-heading font-medium text-4xl md:text-5xl text-foreground group-hover:text-background tracking-tighter mt-4 flex items-center justify-between">
                 {stat.value}
+                <ArrowUpRight className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity" />
               </p>
-            </div>
+            </Link>
           ))}
         </motion.div>
 
