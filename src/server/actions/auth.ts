@@ -83,7 +83,7 @@ export async function signupAction(
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/portal",
+    redirectTo: "/",
   });
 
   return { success: true };
@@ -105,10 +105,14 @@ export async function loginAction(
     await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: (formData.get("callbackUrl") as string) || "/portal",
+      redirectTo: (formData.get("callbackUrl") as string) || "/",
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      const msg = (error.cause?.err as any)?.message;
+      if (msg === "USER_NOT_FOUND") return { error: "USER_NOT_FOUND" };
+      if (msg === "INVALID_PASSWORD") return { error: "INVALID_PASSWORD" };
+
       switch (error.type) {
         case "CredentialsSignin":
           return { error: "Invalid email or password." };

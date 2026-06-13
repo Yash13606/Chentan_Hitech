@@ -44,28 +44,18 @@ export function FeaturedProducts({
 
   return (
     <section className="px-6 py-20 md:py-24 max-w-6xl mx-auto">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-        <SectionHeader
-          eyebrow="Featured"
-          title="Equipment in demand right now"
-          sub="A curated selection of best-sellers and signature platforms across cooking, refrigeration, laundry and service."
-        />
-        <FadeUp delay={0.2} className="shrink-0">
-          <Link
-            href="/catalog"
-            className="text-sm font-medium text-foreground inline-flex items-center gap-1 hover:gap-2 transition-all whitespace-nowrap"
-          >
-            View full catalog <ArrowRight className="w-4 h-4" />
-          </Link>
-        </FadeUp>
-      </div>
+      <SectionHeader
+        eyebrow="Featured"
+        title="Equipment in demand right now"
+        sub="A curated selection of best-sellers and signature platforms across cooking, refrigeration, laundry and service."
+      />
 
       <StaggerGrid
         className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         stagger={0.08}
         delay={0.1}
       >
-        {products.map((p) => (
+        {products.slice(0, 3).map((p) => (
           <StaggerItem key={p.id}>
             <IndustrialProductCard
               productId={p.id}
@@ -87,6 +77,15 @@ export function FeaturedProducts({
           </StaggerItem>
         ))}
       </StaggerGrid>
+
+      <FadeUp delay={0.4} className="mt-14 flex justify-center">
+        <Link
+          href="/catalog"
+          className="inline-flex items-center gap-2 border border-border bg-card/40 hover:bg-muted/50 text-foreground text-sm font-medium py-3 px-8 transition-colors duration-300"
+        >
+          View Full Catalog <ArrowRight className="w-4 h-4" />
+        </Link>
+      </FadeUp>
     </section>
   );
 }

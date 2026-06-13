@@ -75,11 +75,11 @@ export function ActiveFilters({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 flex-wrap mb-5 transition-opacity",
+        "flex items-center gap-2 flex-wrap transition-opacity",
         isPending && "opacity-60"
       )}
     >
-      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.14em] mr-1">
+      <span className="text-sm font-heading italic text-muted-foreground mr-3">
         Filtering by
       </span>
 
@@ -90,17 +90,17 @@ export function ActiveFilters({
             key={chip.key}
             type="button"
             onClick={() => removeOne(chip.param)}
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="group flex items-center gap-2 pb-0.5 border-b border-border hover:border-foreground transition-colors"
             aria-label={`Remove ${chip.label} filter`}
           >
-            <span className="max-w-[14rem] truncate">{chip.label}</span>
-            <span className="w-4 h-4 grid place-items-center rounded-full bg-background/15 group-hover:bg-background/25 transition-colors">
-              <X className="w-2.5 h-2.5" />
+            <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-foreground">
+              {chip.label}
             </span>
+            <X className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors" />
           </motion.button>
         ))}
       </AnimatePresence>
@@ -109,7 +109,7 @@ export function ActiveFilters({
         <button
           type="button"
           onClick={clearAll}
-          className="ml-1 text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-border hover:decoration-foreground transition-colors"
+          className="ml-4 text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors"
         >
           Clear all
         </button>

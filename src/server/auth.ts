@@ -35,6 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
 
     Credentials({
@@ -60,12 +61,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash) {
+          throw new Error("USER_NOT_FOUND");
+        }
 
         // Lazy import argon2 to avoid issues in edge environments
         const { verify } = await import("@node-rs/argon2");
         const valid = await verify(user.passwordHash, parsed.data.password);
-        if (!valid) return null;
+        if (!valid) {
+          throw new Error("INVALID_PASSWORD");
+        }
 
         return {
           id: user.id,
@@ -112,25 +117,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
+  },
 
-    // Auto-provision Company on first Google OAuth sign-in
-    async signIn({ user, account }) {
-      if (account?.provider === "google" && user.id) {
-        const existing = await db.user.findUnique({
-          where: { id: user.id },
-          select: { companyId: true },
+  events: {
+    // Auto-provision Company on first Google OAuth sign-in (or any OAuth that creates a new user)
+    async createUser({ user }) {
+      if (user.id) {
+        const company = await db.company.create({
+          data: { name: user.name ?? "My Company" },
         });
-        if (!existing?.companyId) {
-          const company = await db.company.create({
-            data: { name: user.name ?? "My Company" },
-          });
-          await db.user.update({
-            where: { id: user.id },
-            data: { companyId: company.id, role: Role.CUSTOMER },
-          });
-        }
+        await db.user.update({
+          where: { id: user.id },
+          data: { companyId: company.id, role: Role.CUSTOMER },
+        });
       }
-      return true;
     },
   },
 });

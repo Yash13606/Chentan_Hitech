@@ -7,8 +7,9 @@ export const signupSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Must contain an uppercase letter")
-    .regex(/[0-9]/, "Must contain a number"),
-  phone: z.string().optional(),
+    .regex(/[0-9]/, "Must contain a number")
+    .regex(/[^A-Za-z0-9]/, "Must contain a special character"),
+  phone: z.string().min(1, "Phone number is required"),
   // Company fields — required on signup (PRD: no anonymous submissions)
   companyName: z.string().min(2, "Company name is required"),
   industry: z.enum([
@@ -42,7 +43,8 @@ export const resetPasswordSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Must contain an uppercase letter")
-    .regex(/[0-9]/, "Must contain a number"),
+    .regex(/[0-9]/, "Must contain a number")
+    .regex(/[^A-Za-z0-9]/, "Must contain a special character"),
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;

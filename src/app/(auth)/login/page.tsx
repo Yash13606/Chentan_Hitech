@@ -1,30 +1,78 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState, use } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction } from "@/server/actions/auth";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { loginSchema } from "@/server/validators/auth";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-function SubmitButton() {
+function SubmitButton({ isValid, missingFields }: { isValid: boolean; missingFields: string[] }) {
   const { pending } = useFormStatus();
+  const disabled = !isValid || pending;
+
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full bg-primary text-primary-foreground font-sans font-medium text-sm py-3 px-6 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
-    >
-      {pending ? "Signing in…" : "Sign In"}
-    </button>
+    <div className="space-y-2 mt-2">
+      <button
+        type="submit"
+        disabled={disabled}
+        className={cn(
+          "w-full font-sans font-medium text-sm py-3 px-6 rounded-md transition-all",
+          disabled
+            ? "bg-muted text-muted-foreground cursor-not-allowed"
+            : "bg-primary text-primary-foreground hover:opacity-90"
+        )}
+      >
+        {pending ? "Signing in…" : "Sign In"}
+      </button>
+
+      {!isValid && missingFields.length > 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          Still needed: {missingFields.join(", ")}
+        </p>
+      )}
+    </div>
   );
 }
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; reset?: string; email?: string; error?: string }>;
 }) {
+  const params = use(searchParams);
   const [state, action] = useActionState(loginAction, {});
+
+  const [form, setForm] = useState({
+    email: params.email ?? "",
+    password: "",
+  });
+
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [showPassword, setShowPassword] = useState(false);
+
+  const touch = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
+  const handleChange = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const validation = useMemo(() => {
+    return loginSchema.safeParse(form);
+  }, [form]);
+
+  const clientErrors = !validation.success ? validation.error.flatten().fieldErrors : {};
+  
+  const errorFor = (field: string) => {
+    return clientErrors[field as keyof typeof clientErrors]?.[0] ?? null;
+  };
+
+  const showError = (field: string) => touched[field] && !!errorFor(field);
+
+  const missingFields: string[] = [];
+  if (!form.email || clientErrors.email) missingFields.push("Email");
+  if (!form.password || clientErrors.password) missingFields.push("Password");
+
+  const isValid = missingFields.length === 0;
 
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -41,22 +89,58 @@ export default function LoginPage({
           </p>
         </div>
 
-        <div className="border border-border rounded-md bg-card p-8">
+        <div className="border border-border rounded-md bg-card p-8 shadow-sm">
           <h1 className="font-heading font-medium text-xl text-foreground mb-6">
             Sign in to your account
           </h1>
 
-          {/* Reset success message */}
-          {/* searchParams is a Promise in Next 16 — handled via Suspense in real use */}
-
-          {/* Error */}
-          {state.error && (
-            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 mb-4">
-              {state.error}
-            </p>
+          {/* OAuth Errors from URL */}
+          {params.error === "AccessDenied" && (
+            <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive leading-relaxed">
+                Account not found or access was denied. <Link href="/signup" className="underline font-medium hover:text-destructive/80">Sign up</Link> to create one.
+              </p>
+            </div>
+          )}
+          {params.error && params.error !== "AccessDenied" && (
+            <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive leading-relaxed">
+                Authentication error: {params.error}
+              </p>
+            </div>
           )}
 
-          <form action={action} className="space-y-4">
+          {/* Custom Server Errors from Credentials */}
+          {state.error === "USER_NOT_FOUND" && (
+            <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive leading-relaxed">
+                Account not found. <Link href="/signup" className="underline font-medium hover:text-destructive/80">Sign up</Link> to create one.
+              </p>
+            </div>
+          )}
+          {state.error === "INVALID_PASSWORD" && (
+            <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive leading-relaxed">
+                Incorrect password. Please try again.
+              </p>
+            </div>
+          )}
+          {state.error && state.error !== "USER_NOT_FOUND" && state.error !== "INVALID_PASSWORD" && (
+            <div className="mb-5 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive leading-relaxed">{state.error}</p>
+            </div>
+          )}
+
+          <form action={action} noValidate className="space-y-4">
+            {params.callbackUrl && (
+              <input type="hidden" name="callbackUrl" value={params.callbackUrl} />
+            )}
+
             <div>
               <label
                 htmlFor="email"
@@ -70,9 +154,22 @@ export default function LoginPage({
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                value={form.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                onBlur={() => touch("email")}
+                className={cn(
+                  "w-full border rounded-md bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2",
+                  showError("email")
+                    ? "border-destructive/60 focus:ring-destructive/20 focus:border-destructive text-foreground"
+                    : "border-border focus:ring-primary/30 focus:border-primary text-foreground placeholder:text-muted-foreground"
+                )}
                 placeholder="you@company.com"
               />
+              {showError("email") && (
+                <p className="text-xs text-destructive mt-1.5 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errorFor("email")}
+                </p>
+              )}
             </div>
 
             <div>
@@ -90,17 +187,30 @@ export default function LoginPage({
                   Forgot password?
                 </Link>
               </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="w-full border border-border rounded-md bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={form.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  onBlur={() => touch("password")}
+                  className="w-full border border-border rounded-md bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
-            <SubmitButton />
+            <SubmitButton isValid={isValid} missingFields={missingFields} />
           </form>
 
           {/* Divider */}
@@ -115,7 +225,7 @@ export default function LoginPage({
 
           {/* Google OAuth */}
           <button
-            onClick={() => signIn("google", { callbackUrl: "/portal" })}
+            onClick={() => signIn("google", { callbackUrl: "/" })}
             type="button"
             className="w-full flex items-center justify-center gap-3 border border-border rounded-md py-2.5 px-4 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
           >
@@ -147,7 +257,7 @@ export default function LoginPage({
             href="/signup"
             className="font-medium text-foreground underline underline-offset-4"
           >
-            Request access
+            Sign up
           </Link>
         </p>
       </div>

@@ -1,56 +1,50 @@
 "use client";
 
 import { COMPANY } from "@/lib/company";
-import { Award, Globe2, ShieldCheck, Star } from "lucide-react";
 import { StaggerGrid, StaggerItem } from "@/components/animation";
 
 export function TrustStrip() {
-  const items = [
+  const stats = [
     {
-      icon: Award,
-      label: `${COMPANY.trust.yearsInBusiness}+ years`,
-      sub: "in business",
+      value: `${COMPANY.trust.yearsInBusiness}+`,
+      label: "Years in business",
     },
     {
-      icon: Globe2,
-      label: `${COMPANY.trust.partnerBrandCount}+ brands`,
-      sub: "distributed",
+      value: `${COMPANY.trust.partnerBrandCount}+`,
+      label: "Brands distributed",
     },
     {
-      icon: Star,
-      label: `${COMPANY.trust.rating} / 5`,
-      sub: `${COMPANY.trust.reviewCount} reviews`,
+      value: `${COMPANY.trust.rating} / 5`,
+      label: `${COMPANY.trust.reviewCount} verified reviews`,
     },
     {
-      icon: ShieldCheck,
-      label: "GSTIN verified",
-      sub: COMPANY.legal.gstin,
+      value: "GSTIN",
+      label: `Verified ${COMPANY.legal.gstin}`,
     },
-  ] as const;
+  ];
 
   return (
-    <div className="border-y border-border bg-card/40">
-      <StaggerGrid
-        className="max-w-6xl mx-auto px-6 py-5 grid grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-4 sm:gap-x-8"
-        stagger={0.08}
-        delay={0.1}
-      >
-        {items.map((item) => (
-          <StaggerItem key={item.label}>
-            <div className="flex items-center gap-3">
-              <item.icon className="w-4 h-4 text-muted-foreground shrink-0" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-sm font-medium text-foreground">
-                  {item.label}
+    <div className="w-full border-y border-border bg-background relative z-10">
+      <div className="max-w-6xl mx-auto bg-border overflow-hidden">
+        <StaggerGrid
+          className="grid grid-cols-2 lg:grid-cols-4 gap-px"
+          stagger={0.08}
+          delay={0.1}
+        >
+          {stats.map((stat, i) => (
+            <StaggerItem key={i} className="bg-background h-full">
+              <div className="group flex flex-col justify-center px-6 sm:px-8 py-10 md:py-14 h-full hover:bg-muted/30 transition-colors duration-500 cursor-default">
+                <span className="font-heading font-medium text-[2.5rem] md:text-5xl lg:text-6xl tracking-tight text-foreground mb-3 leading-none transition-transform duration-500 group-hover:-translate-y-1">
+                  {stat.value}
                 </span>
-                <span className="text-[11px] text-muted-foreground font-mono tracking-tight">
-                  {item.sub}
+                <span className="text-[10px] sm:text-[11px] font-semibold tracking-[0.15em] uppercase text-muted-foreground leading-relaxed">
+                  {stat.label}
                 </span>
               </div>
-            </div>
-          </StaggerItem>
-        ))}
-      </StaggerGrid>
+            </StaggerItem>
+          ))}
+        </StaggerGrid>
+      </div>
     </div>
   );
 }

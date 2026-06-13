@@ -21,7 +21,7 @@ export async function proxy(request: NextRequest) {
 
   // Redirect logged-in users away from auth pages
   if (isLoggedIn && AUTH_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL("/portal", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Protect customer portal
