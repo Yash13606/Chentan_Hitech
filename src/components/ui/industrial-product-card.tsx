@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./status-badge";
 import { Lock } from "lucide-react";
@@ -28,6 +29,15 @@ function formatPrice(cents: number) {
     maximumFractionDigits: 0,
   }).format(cents / 100);
 }
+
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1590496736639-6541f4864fa9?w=600&q=80",
+  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&q=80",
+  "https://images.unsplash.com/photo-1565514020179-026b92b84bb6?w=600&q=80"
+];
 
 export function IndustrialProductCard({
   productId,
@@ -89,13 +99,19 @@ export function IndustrialProductCard({
           )}
         </div>
 
-        <div className="relative">
-          <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-muted-foreground/60">
+        <div className="relative z-10">
+          <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-muted-foreground/90 mix-blend-difference text-white">
             {category}
           </p>
-          <p className="mt-1 font-heading text-base font-medium text-foreground/80 line-clamp-2 leading-snug">
-            {imagePlaceholder || title}
-          </p>
+        </div>
+        
+        {/* Render actual image if provided, otherwise Unsplash fallback */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={imageKey || FALLBACK_IMAGES[(sku.charCodeAt(0) || 0) % FALLBACK_IMAGES.length]} 
+            alt={title}
+            className="object-cover w-full h-full opacity-80 mix-blend-multiply" 
+          />
         </div>
       </div>
 
