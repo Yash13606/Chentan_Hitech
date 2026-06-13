@@ -46,6 +46,7 @@ export function IndustrialProductCard({
   slug,
   sku,
   imagePlaceholder,
+  imageKey,
   specs,
   availability,
   priceCents,
