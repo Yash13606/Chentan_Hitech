@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { formatDate } from "@/lib/utils";
 
 interface Inquiry {
   id: string;
