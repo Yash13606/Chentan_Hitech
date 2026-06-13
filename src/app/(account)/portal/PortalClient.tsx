@@ -8,7 +8,7 @@ interface Inquiry {
   id: string;
   inquiryNumber: string;
   status: string;
-  leadScore: number | null;
+  leadScore: string;
   createdAt: Date;
 }
 
