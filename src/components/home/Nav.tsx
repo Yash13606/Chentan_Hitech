@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IndustrialButton } from "@/components/ui/industrial-button";
 import { useCartCount } from "@/lib/use-cart-count";
 import { cn } from "@/lib/utils";
+import { signOutAction } from "@/server/actions/auth";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -96,7 +97,7 @@ export function Nav() {
                   )}
                 </IndustrialButton>
               </Link>
-              <form action="/api/auth/signout" method="POST" className="hidden md:block">
+              <form action={signOutAction} className="hidden md:block">
                 <button
                   type="submit"
                   className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -219,7 +220,7 @@ export function Nav() {
                         </span>
                       )}
                     </Link>
-                    <form action="/api/auth/signout" method="POST" className="mt-1">
+                    <form action={signOutAction} className="mt-1">
                       <button
                         type="submit"
                         className="w-full py-3.5 text-sm font-medium flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"

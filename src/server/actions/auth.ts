@@ -4,7 +4,15 @@ import { db } from "@/server/db";
 import { signupSchema } from "@/server/validators/auth";
 import { hash } from "@node-rs/argon2";
 import { Role, IndustryType } from "@/generated/prisma/client";
-import { signIn } from "@/server/auth";
+import { signIn, signOut } from "@/server/auth";
+
+// ─────────────────────────────────────────────────────
+// SIGN OUT
+// ─────────────────────────────────────────────────────
+
+export async function signOutAction() {
+  await signOut({ redirectTo: "/login" });
+}
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { after } from "next/server";
