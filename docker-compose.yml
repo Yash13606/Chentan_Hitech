@@ -1,0 +1,27 @@
+# Local Postgres for development. Production uses Supabase (see CLAUDE.md).
+# Start:  docker compose up -d
+# Stop:   docker compose down
+# Reset:  docker compose down -v && docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chetan-hitech-db
+    restart: unless-stopped
+    ports:
+      # Host 5433 avoids conflict with Windows PostgreSQL on 5432
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: chetan_dev
+      POSTGRES_DB: chetan_hitech
+    volumes:
+      - chetan_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chetan_hitech"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  chetan_pgdata:

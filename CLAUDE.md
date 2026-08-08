@@ -5,9 +5,8 @@
 ## What this project is
 B2B industrial equipment procurement platform for Chetan Hi-Tech. Customers (facility managers, procurement teams) browse equipment, submit RFQs, receive branded PDF quotations, and manage their account via a portal. Sales team manages inquiries through a CRM. Admins control the full catalog and content.
 
-**Live URL:** https://chentanhitech-production.up.railway.app  
 **GitHub:** https://github.com/Yash13606/Chentan_Hitech  
-**Stack:** Next.js 16.2.6 · React 19 · Prisma 7.8 · PostgreSQL (Railway) · Auth.js v5 · Cloudflare R2 · Resend · Tailwind v4
+**Stack:** Next.js 16.2.6 · React 19 · Prisma 7.8 · PostgreSQL (local Docker) · Auth.js v5 · Cloudflare R2 · Resend · Tailwind v4
 
 ---
 
@@ -39,7 +38,7 @@ src/
     api/
       auth/[...nextauth]/
       ai/suggest/       ← Anthropic AI assistant (POST)
-      health/           ← Railway healthcheck
+      health/           ← App healthcheck
       portal/bundles/   ← bundle data API
       admin/articles/[id]/ ← article fetch for edit
       uploads/presign/  ← R2 presigned PUT
@@ -144,14 +143,32 @@ await db.$transaction(async (tx) => { ... });
 
 ---
 
-## Deployment
-- **Platform:** Railway (project: splendid-quietude)
-- **Database:** PostgreSQL via `${{Postgres.DATABASE_URL}}`
-- **Build command:** `npm run build` (postinstall runs `prisma generate` automatically)
-- **Node version:** 20 (set via `NIXPACKS_NODE_VERSION=20` + `.nvmrc`)
-- **Health check:** `/api/health` → `{"status":"ok","db":"connected"}`
-- **R2 bucket:** `chetan-hitech` on Cloudflare account `361246d2529c9324af1bacc33d2adfb8`
-- **Email domain:** `chetanhitech.com` via Resend (DNS pending in Cloudflare)
+## Local database
+- **Postgres:** Docker Compose (`docker-compose.yml`) — `npm run db:up`
+- **URL:** `postgresql://postgres:chetan_dev@localhost:5433/chetan_hitech`
+- **First setup:** `npm run db:up` → `npm run db:push` → `npm run db:seed` (optional)
+
+## Production database — Supabase
+Supabase Postgres has two connection strings; the app needs both, used in different places:
+- **Pooled (Supavisor, port 6543, `?pgbouncer=true`)** — set as `DATABASE_URL` in **Vercel's** env vars. This is what the deployed app queries with at runtime (serverless functions must use the pooler or they exhaust Supabase's direct connection limit).
+- **Direct (port 5432)** — used **locally/in CI only** to run `prisma db push` / `prisma migrate` against prod. Never set this as the Vercel runtime `DATABASE_URL`.
+- Find both under Supabase dashboard → Project Settings → Database → Connection string.
+
+## Deployment — Vercel
+1. Import the GitHub repo into Vercel (framework preset: Next.js, auto-detected).
+2. **Build command:** `npm run build` (postinstall runs `prisma generate` automatically). **Node version:** 20 (`.nvmrc`).
+3. Set env vars in Vercel project settings (Production + Preview): `DATABASE_URL` (Supabase pooled string above), `AUTH_SECRET`, `AUTH_URL` (your prod domain), `AUTH_GOOGLE_ID`/`SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `ADMIN_NOTIFICATION_EMAIL`, `R2_*` (see below), `NEXT_PUBLIC_APP_URL`. `ANTHROPIC_API_KEY` / `UPSTASH_*` / `SENTRY_*` optional — omit to disable those features.
+4. Run `prisma db push` (or `migrate deploy`) against Supabase's **direct** URL once before first deploy to create the schema.
+5. **Health check:** `/api/health` → `{"status":"ok","db":"connected"}` — hit this after deploy to confirm the DB connection works.
+6. Google OAuth: add `https://<prod-domain>/api/auth/callback/google` as an authorized redirect URI in Google Cloud Console.
+
+## Cloudflare R2 (file storage)
+- Create bucket `chetan-hitech` in the Cloudflare dashboard → R2.
+- Generate an R2 API token (Manage R2 API Tokens) scoped to that bucket → gives `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`.
+- `R2_ENDPOINT` = `https://<account_id>.r2.cloudflarestorage.com`.
+- `R2_PUBLIC_URL`: either the R2.dev public bucket URL, or a custom domain mapped to the bucket (Cloudflare → bucket → Settings → Custom Domains) — `next.config.ts` already whitelists both `*.r2.cloudflarestorage.com` and whatever hostname `R2_PUBLIC_URL` resolves to, so no code change needed once the env var is set.
+- Without these vars set, uploads (product images, quotation PDFs) will fail — this is not optional in production, unlike AI/rate-limit/Sentry.
+- **Email domain:** `chetanhitech.com` via Resend
 
 ---
 
