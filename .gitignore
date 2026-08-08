@@ -48,3 +48,6 @@ next-env.d.ts
 .claude/
 exsting website docs/
 .understand-anything/
+
+.vercel
+.env*.local
