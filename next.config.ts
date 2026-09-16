@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
+      // Allow IndiaMART CDN for scraped product images
+      {
+        protocol: "https",
+        hostname: "*.imimg.com",
+      },
     ],
   },
 

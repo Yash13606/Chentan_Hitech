@@ -31,7 +31,18 @@ export type DbCart = {
 // GET OR CREATE DB CART
 // ─────────────────────────────────────────────────────
 
+const DEMO_CART_STATE = new Map<string, DbCartItem>();
+
+function getDemoCart(): DbCart {
+  return {
+    id: "demo_cart",
+    items: Array.from(DEMO_CART_STATE.values()),
+  };
+}
+
 async function getOrCreateCart(userId: string): Promise<DbCart> {
+  if (userId.startsWith("demo_")) return getDemoCart();
+
   const existing = await db.cart.findUnique({
     where: { userId },
     include: {
@@ -99,8 +110,23 @@ export async function addToDbCartAction(
   notes?: string
 ): Promise<CartActionResult> {
   const session = await requireAuth();
-  const cart = await getOrCreateCart(session.user.id);
 
+  if (session.user.id.startsWith("demo_")) {
+    const existing = DEMO_CART_STATE.get(productId);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      const product = await db.product.findUnique({
+        where: { id: productId, isActive: true },
+        select: { id: true, title: true, sku: true, slug: true, priceCents: true, availability: true },
+      });
+      if (!product) return { ok: false, error: "Product not found." };
+      DEMO_CART_STATE.set(productId, { id: "demo_item_" + productId, qty, notes: notes ?? null, product });
+    }
+    return { ok: true };
+  }
+
+  const cart = await getOrCreateCart(session.user.id);
   const existing = cart.items.find((i) => i.product.id === productId);
 
   if (existing) {
@@ -132,6 +158,13 @@ export async function removeFromDbCartAction(
   itemId: string
 ): Promise<CartActionResult> {
   const session = await requireAuth();
+
+  if (session.user.id.startsWith("demo_")) {
+    const productId = itemId.replace("demo_item_", "");
+    DEMO_CART_STATE.delete(productId);
+    return { ok: true };
+  }
+
   const cart = await db.cart.findUnique({ where: { userId: session.user.id } });
   if (!cart) return { ok: false, error: "Cart not found." };
 
@@ -150,6 +183,18 @@ export async function updateDbCartItemQtyAction(
   qty: number
 ): Promise<CartActionResult> {
   const session = await requireAuth();
+
+  if (session.user.id.startsWith("demo_")) {
+    const productId = itemId.replace("demo_item_", "");
+    if (qty <= 0) {
+      DEMO_CART_STATE.delete(productId);
+    } else {
+      const item = DEMO_CART_STATE.get(productId);
+      if (item) item.qty = qty;
+    }
+    return { ok: true };
+  }
+
   const cart = await db.cart.findUnique({ where: { userId: session.user.id } });
   if (!cart) return { ok: false, error: "Cart not found." };
 
@@ -176,6 +221,26 @@ export async function setDbCartQtyByProductAction(
   qty: number
 ): Promise<CartActionResult> {
   const session = await requireAuth();
+
+  if (session.user.id.startsWith("demo_")) {
+    if (qty <= 0) {
+      DEMO_CART_STATE.delete(productId);
+      return { ok: true };
+    }
+    const existing = DEMO_CART_STATE.get(productId);
+    if (existing) {
+      existing.qty = qty;
+    } else {
+      const product = await db.product.findUnique({
+        where: { id: productId, isActive: true },
+        select: { id: true, title: true, sku: true, slug: true, priceCents: true, availability: true },
+      });
+      if (!product) return { ok: false, error: "Product not found." };
+      DEMO_CART_STATE.set(productId, { id: "demo_item_" + productId, qty, notes: null, product });
+    }
+    return { ok: true };
+  }
+
   const cart = await getOrCreateCart(session.user.id);
   const existing = cart.items.find((i) => i.product.id === productId);
 
@@ -216,6 +281,15 @@ export async function setDbCartQtyByProductAction(
 export async function getCartQtyMapAction(): Promise<Record<string, number>> {
   try {
     const session = await requireAuth();
+
+    if (session.user.id.startsWith("demo_")) {
+      const map: Record<string, number> = {};
+      for (const [productId, item] of DEMO_CART_STATE.entries()) {
+        map[productId] = item.qty;
+      }
+      return map;
+    }
+
     const cart = await db.cart.findUnique({
       where: { userId: session.user.id },
       include: { items: { select: { productId: true, qty: true } } },
@@ -239,6 +313,30 @@ export async function mergeGuestCartAction(
   if (!guestItems.length) return { ok: true };
 
   const session = await requireAuth();
+
+  if (session.user.id.startsWith("demo_")) {
+    for (const guestItem of guestItems) {
+      const existing = DEMO_CART_STATE.get(guestItem.productId);
+      if (existing) {
+        existing.qty += guestItem.qty;
+      } else {
+        const product = await db.product.findUnique({
+          where: { id: guestItem.productId, isActive: true },
+          select: { id: true, title: true, sku: true, slug: true, priceCents: true, availability: true },
+        });
+        if (product) {
+          DEMO_CART_STATE.set(guestItem.productId, {
+            id: "demo_item_" + guestItem.productId,
+            qty: guestItem.qty,
+            notes: guestItem.notes ?? null,
+            product,
+          });
+        }
+      }
+    }
+    return { ok: true };
+  }
+
   const cart = await getOrCreateCart(session.user.id);
 
   // Upsert each guest item into DB cart
@@ -279,6 +377,12 @@ export async function mergeGuestCartAction(
 
 export async function clearDbCartAction(): Promise<CartActionResult> {
   const session = await requireAuth();
+
+  if (session.user.id.startsWith("demo_")) {
+    DEMO_CART_STATE.clear();
+    return { ok: true };
+  }
+
   const cart = await db.cart.findUnique({ where: { userId: session.user.id } });
   if (!cart) return { ok: true };
 

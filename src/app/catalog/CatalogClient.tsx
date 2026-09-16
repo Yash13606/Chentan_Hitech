@@ -145,6 +145,11 @@ export function CatalogClient({
                       ? (product.priceCents ?? undefined)
                       : undefined
                   }
+                  imageKey={
+                    Array.isArray(product.images) && product.images.length > 0
+                      ? product.images[0]
+                      : undefined
+                  }
                   isLoggedIn={isLoggedIn}
                   initialQty={cartQtyMap[product.id] ?? 0}
                 />

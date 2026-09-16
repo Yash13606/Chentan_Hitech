@@ -249,6 +249,8 @@ export default function LoginPage({
             </svg>
             Continue with Google
           </button>
+
+
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">

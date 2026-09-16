@@ -9,6 +9,15 @@ import { Lock, ArrowLeft } from "lucide-react";
 import { Nav } from "@/components/home/Nav";
 import { Footer } from "@/components/home/Footer";
 
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1590496736639-6541f4864fa9?w=600&q=80",
+  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=600&q=80",
+  "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?w=600&q=80",
+  "https://images.unsplash.com/photo-1565514020179-026b92b84bb6?w=600&q=80"
+];
+
 function formatPrice(cents: number) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -76,8 +85,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Image */}
-          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-            <p className="text-muted-foreground font-mono text-sm">[Product Image]</p>
+          <div className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+            <img
+              src={
+                (Array.isArray(product.images) && product.images.length > 0)
+                  ? (product.images[0] as string)
+                  : FALLBACK_IMAGES[(product.sku.charCodeAt(0) || 0) % FALLBACK_IMAGES.length]
+              }
+              alt={product.title}
+              className="object-cover w-full h-full mix-blend-multiply"
+            />
           </div>
 
           {/* Details */}

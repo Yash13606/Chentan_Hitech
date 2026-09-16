@@ -91,7 +91,7 @@ export async function signupAction(
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/",
+    redirectTo: "/catalog",
   });
 
   return { success: true };

@@ -23,6 +23,7 @@ import {
   type DbCart,
 } from "@/server/actions/cart";
 import { submitRfqAction, type RfqFormState } from "@/server/actions/rfq";
+import { FileText, X } from "lucide-react";
 
 // ─────────────────────────────────────────────────────
 // TYPES
@@ -114,6 +115,10 @@ export default function CartPage() {
   const [dbCart, setDbCart] = useState<DbCart | null>(null);
   const [loadingCart, setLoadingCart] = useState(false);
 
+  // PDF Preview State
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -192,6 +197,34 @@ export default function CartPage() {
     submitRfqAction,
     {}
   );
+
+  async function handlePreviewPdf() {
+    setIsPreviewLoading(true);
+    try {
+      const res = await fetch("/api/cart/preview-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cartRows,
+          customerName: session?.user?.name || "",
+          customerEmail: session?.user?.email || "",
+          companyName: "", // Optional, could read from a form if needed
+        }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      } else {
+        alert("Failed to generate preview");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error generating preview");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  }
 
   // Redirect on success
   useEffect(() => {
@@ -394,17 +427,57 @@ export default function CartPage() {
                 )}
 
                 {isAuthenticated ? (
-                  <SubmitButton
-                    disabled={cartRows.length === 0}
-                    pending={isSubmitting}
-                  />
+                  <div className="space-y-3">
+                    <SubmitButton
+                      disabled={cartRows.length === 0}
+                      pending={isSubmitting}
+                    />
+                    <button
+                      type="button"
+                      onClick={handlePreviewPdf}
+                      disabled={cartRows.length === 0 || isPreviewLoading}
+                      className="w-full h-12 border border-border text-foreground rounded-md text-base font-medium hover:bg-muted/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isPreviewLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          Preview PDF
+                        </>
+                      )}
+                    </button>
+                  </div>
                 ) : (
-                  <Link
-                    href="/login?callbackUrl=/cart"
-                    className="block w-full text-center h-12 leading-[3rem] bg-primary text-primary-foreground rounded-md text-base font-medium hover:opacity-90 transition-opacity"
-                  >
-                    Login to get quotation
-                  </Link>
+                  <div className="space-y-3">
+                    <Link
+                      href="/login?callbackUrl=/cart"
+                      className="block w-full text-center h-12 leading-[3rem] bg-primary text-primary-foreground rounded-md text-base font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Login to get quotation
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handlePreviewPdf}
+                      disabled={cartRows.length === 0 || isPreviewLoading}
+                      className="w-full h-12 border border-border text-foreground rounded-md text-base font-medium hover:bg-muted/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isPreviewLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          Preview PDF
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
 
                 {!isAuthenticated && (
@@ -417,6 +490,31 @@ export default function CartPage() {
           </div>
         </form>
       </main>
+
+      {/* PDF Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 md:p-12">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-5xl h-full flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h3 className="font-heading font-medium text-lg">Quotation Preview</h3>
+              <button
+                onClick={() => setPreviewUrl(null)}
+                className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 w-full bg-muted/20">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-none"
+                title="PDF Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
