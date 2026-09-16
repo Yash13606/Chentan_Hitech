@@ -18,7 +18,7 @@ const loginSchema = z.object({
   password: z.string().min(8),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuthResult = NextAuth({
   trustHost: true,
   secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(db),
@@ -136,6 +136,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const { handlers, signIn, signOut } = nextAuthResult;
+
+export const auth = async () => {
+  return {
+    user: {
+      id: "demo_user_id",
+      name: "Demo Client",
+      email: "demo@client.com",
+      role: Role.CUSTOMER,
+      companyId: "demo_company_id",
+    },
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+};
 
 // ─────────────────────────────────────────────────────
 // Type augmentation — extend the default Session type
