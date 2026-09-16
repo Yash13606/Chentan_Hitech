@@ -1,4 +1,11 @@
-import { handlers } from "@/server/auth";
+import { handlers, auth } from "@/server/auth";
 
-// Auth.js v5 — export GET and POST handlers
-export const { GET, POST } = handlers;
+export const GET = async (req: Request) => {
+  const url = new URL(req.url);
+  if (url.pathname === "/api/auth/session") {
+    return Response.json(await auth());
+  }
+  return handlers.GET(req);
+};
+
+export const POST = handlers.POST;
