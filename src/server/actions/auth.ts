@@ -2,7 +2,6 @@
 
 import { db } from "@/server/db";
 import { signupSchema } from "@/server/validators/auth";
-import { hash } from "@node-rs/argon2";
 import { Role, IndustryType } from "@/generated/prisma/client";
 import { signIn, signOut } from "@/server/auth";
 
@@ -50,7 +49,8 @@ export async function signupAction(
     return { error: "An account with this email already exists." };
   }
 
-  // Hash password
+  // Hash password (lazy import for native module compat on Vercel)
+  const { hash } = await import("@node-rs/argon2");
   const passwordHash = await hash(password, {
     memoryCost: 19456,
     timeCost: 2,
@@ -176,6 +176,7 @@ export async function resetPasswordAction(token: string, password: string) {
     return { error: "Reset link has expired. Please request a new one." };
   }
 
+  const { hash } = await import("@node-rs/argon2");
   const passwordHash = await hash(password, {
     memoryCost: 19456,
     timeCost: 2,
